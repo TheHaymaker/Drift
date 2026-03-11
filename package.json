@@ -1,0 +1,14 @@
+{
+  "name": "drift",
+  "version": "1.0.0",
+  "description": "A writing instrument that commits to git when you pause typing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js ./poem-repo poem.txt 3377"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  }
+}
