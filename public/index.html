@@ -30,6 +30,96 @@
     overflow-x: hidden;
   }
 
+  /* ─── Dashboard ─── */
+
+  .dashboard {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 80px 32px;
+  }
+
+  .dashboard-header {
+    margin-bottom: 40px;
+  }
+
+  .dashboard-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+
+  .dashboard-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .new-poem-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 32px;
+  }
+
+  .new-poem-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(160, 140, 106, 0.08);
+  }
+
+  .doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .doc-item {
+    padding: 14px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 2px solid transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .doc-item:hover {
+    background: rgba(160, 140, 106, 0.06);
+    border-left-color: var(--border);
+  }
+
+  .doc-item-title {
+    font-size: 1rem;
+    color: var(--text);
+  }
+
+  .doc-item-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.52rem;
+    color: var(--text-faint);
+    letter-spacing: 0.04em;
+  }
+
+  .doc-empty {
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 20px 0;
+  }
+
+  /* ─── Editor ─── */
+
   .app {
     display: grid;
     grid-template-columns: 1fr 280px;
@@ -62,7 +152,11 @@
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--text-faint);
+    cursor: pointer;
+    transition: color 0.2s;
   }
+
+  .editor-title:hover { color: var(--accent); }
 
   .editor-filename {
     font-family: 'JetBrains Mono', monospace;
@@ -408,17 +502,32 @@
     z-index: 0;
   }
 
-  .editor-pane, .sidebar { z-index: 1; position: relative; }
+  .editor-pane, .sidebar, .dashboard { z-index: 1; position: relative; }
+
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
 <div class="grain"></div>
 
-<div class="app">
+<!-- ─── Dashboard View ─── -->
+<div class="dashboard" id="dashboardView">
+  <div class="dashboard-header">
+    <div class="dashboard-title">drift</div>
+    <div class="dashboard-subtitle">your poems</div>
+  </div>
+  <button class="new-poem-btn" id="newPoemBtn">+ new poem</button>
+  <div class="doc-list" id="docList">
+    <div class="doc-empty">no poems yet. start one.</div>
+  </div>
+</div>
+
+<!-- ─── Editor View ─── -->
+<div class="app hidden" id="editorView">
   <div class="editor-pane">
     <div class="editor-header">
-      <span class="editor-title">drift</span>
+      <span class="editor-title" id="backBtn">drift</span>
       <span class="editor-filename" id="filename">poem.txt</span>
       <span class="status-pill" id="status">connecting</span>
     </div>
@@ -437,7 +546,7 @@
         <circle class="fill" id="pauseFill" cx="18" cy="18" r="14" />
       </svg>
     </div>
-    <div class="pause-ring-label" id="pauseLabel">pause → commit</div>
+    <div class="pause-ring-label" id="pauseLabel">pause &rarr; commit</div>
   </div>
 
   <div class="sidebar">
@@ -460,7 +569,7 @@
   </div>
 </div>
 
-<div class="connection">
+<div class="connection hidden" id="connStatus">
   <div class="connection-dot" id="connDot"></div>
   <span id="connLabel">connecting</span>
 </div>
@@ -469,9 +578,16 @@
 
 <script>
 (function() {
+  // ─── DOM refs ───
+  const dashboardView = document.getElementById("dashboardView");
+  const editorView = document.getElementById("editorView");
+  const connStatus = document.getElementById("connStatus");
+  const docList = document.getElementById("docList");
+  const newPoemBtn = document.getElementById("newPoemBtn");
+  const backBtn = document.getElementById("backBtn");
   const editor = document.getElementById("editor");
   const status = document.getElementById("status");
-  const filename = document.getElementById("filename");
+  const filenameEl = document.getElementById("filename");
   const commitList = document.getElementById("commitList");
   const commitCountNum = document.getElementById("commitCountNum");
   const thresholdSlider = document.getElementById("thresholdSlider");
@@ -485,11 +601,183 @@
   const toast = document.getElementById("toast");
 
   let ws;
+  let currentDocId = null;
   let pauseThreshold = 3000;
   let lastKeystroke = 0;
   let animFrame;
   let isTyping = false;
   let commitLog = [];
+
+  // ─── Router ───
+
+  function getRoute() {
+    const hash = location.hash || "#/";
+    const writeMatch = hash.match(/^#\/write\/(.+)$/);
+    if (writeMatch) return { view: "write", docId: writeMatch[1] };
+    const readMatch = hash.match(/^#\/read\/(.+)$/);
+    if (readMatch) return { view: "read", docId: readMatch[1] };
+    return { view: "dashboard" };
+  }
+
+  function navigate(hash) {
+    location.hash = hash;
+  }
+
+  function route() {
+    const r = getRoute();
+    if (r.view === "write") {
+      showEditor(r.docId);
+    } else if (r.view === "read") {
+      showEditor(r.docId, true);
+    } else {
+      showDashboard();
+    }
+  }
+
+  window.addEventListener("hashchange", route);
+
+  // ─── Dashboard ───
+
+  function showDashboard() {
+    disconnectWs();
+    currentDocId = null;
+    dashboardView.classList.remove("hidden");
+    editorView.classList.add("hidden");
+    connStatus.classList.add("hidden");
+    document.title = "drift";
+    loadDocList();
+  }
+
+  async function loadDocList() {
+    try {
+      const docs = await fetch("/api/documents").then(r => r.json());
+      docList.innerHTML = "";
+      if (docs.length === 0) {
+        docList.innerHTML = '<div class="doc-empty">no poems yet. start one.</div>';
+        return;
+      }
+      for (const doc of docs) {
+        const div = document.createElement("div");
+        div.className = "doc-item";
+        const modified = doc.last_modified ? new Date(doc.last_modified + "Z").toLocaleDateString() : "";
+        div.innerHTML = `
+          <span class="doc-item-title">${escapeHtml(doc.title || "untitled")}</span>
+          <span class="doc-item-meta">${escapeHtml(doc.filename)} &middot; ${modified}</span>
+        `;
+        div.addEventListener("click", () => navigate("#/write/" + doc.doc_id));
+        docList.appendChild(div);
+      }
+    } catch (e) {
+      docList.innerHTML = '<div class="doc-empty">failed to load documents</div>';
+    }
+  }
+
+  newPoemBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      navigate("#/write/" + data.docId);
+    } catch (e) {
+      showToast("failed to create poem");
+    }
+  });
+
+  backBtn.addEventListener("click", () => navigate("#/"));
+
+  // ─── Editor ───
+
+  function showEditor(docId, readOnly) {
+    if (currentDocId === docId && ws && ws.readyState === 1) return;
+    currentDocId = docId;
+    dashboardView.classList.add("hidden");
+    editorView.classList.remove("hidden");
+    connStatus.classList.remove("hidden");
+    editor.readOnly = !!readOnly;
+    editor.placeholder = readOnly
+      ? "reading..."
+      : "begin writing. drift commits when you pause.";
+    document.title = "drift — writing";
+    connectWs(docId);
+  }
+
+  function disconnectWs() {
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+      ws = null;
+    }
+  }
+
+  function connectWs(docId) {
+    disconnectWs();
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(`${proto}//${location.host}`);
+
+    ws.onopen = () => {
+      connDot.className = "connection-dot connected";
+      connLabel.textContent = "connected";
+      status.textContent = "joining";
+      status.className = "status-pill";
+      // Send join message with docId
+      ws.send(JSON.stringify({ type: "join", docId }));
+    };
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+
+      if (msg.type === "init") {
+        editor.value = msg.content;
+        filenameEl.textContent = msg.filename;
+        pauseThreshold = msg.pauseThreshold;
+        thresholdSlider.value = pauseThreshold;
+        thresholdValue.textContent = (pauseThreshold / 1000).toFixed(1) + "s";
+        renderCommits(msg.log);
+        status.textContent = "ready";
+        status.className = "status-pill";
+        if (!editor.readOnly) editor.focus();
+      }
+
+      if (msg.type === "committed") {
+        status.textContent = "committed " + msg.hash;
+        status.className = "status-pill committed";
+        renderCommits(msg.log, msg.hash);
+        showToast(msg.hash + " \u2014 " + msg.message);
+        setTimeout(() => {
+          status.textContent = "ready";
+          status.className = "status-pill";
+        }, 2000);
+      }
+
+      if (msg.type === "threshold-changed") {
+        pauseThreshold = msg.value;
+        thresholdSlider.value = msg.value;
+        thresholdValue.textContent = (msg.value / 1000).toFixed(1) + "s";
+      }
+
+      if (msg.type === "error") {
+        showToast(msg.message);
+      }
+    };
+
+    ws.onclose = () => {
+      connDot.className = "connection-dot disconnected";
+      connLabel.textContent = "disconnected";
+      status.textContent = "offline";
+      status.className = "status-pill";
+      // Only reconnect if still viewing this document
+      if (getRoute().docId === docId) {
+        setTimeout(() => connectWs(docId), 3000);
+      }
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  // ─── Pause ring ───
 
   function showToast(msg) {
     toast.textContent = msg;
@@ -506,19 +794,21 @@
       const offset = 88 * (1 - progress);
       pauseFill.style.strokeDashoffset = offset;
       pauseFill.classList.add("active");
-      pauseLabel.textContent = `${((pauseThreshold - elapsed) / 1000).toFixed(1)}s → commit`;
+      pauseLabel.textContent = ((pauseThreshold - elapsed) / 1000).toFixed(1) + "s \u2192 commit";
     } else if (isTyping && elapsed >= pauseThreshold) {
       pauseFill.style.strokeDashoffset = 0;
       isTyping = false;
     } else {
       pauseFill.style.strokeDashoffset = 88;
       pauseFill.classList.remove("active");
-      pauseLabel.textContent = "pause → commit";
+      pauseLabel.textContent = "pause \u2192 commit";
     }
 
     animFrame = requestAnimationFrame(updateRing);
   }
   animFrame = requestAnimationFrame(updateRing);
+
+  // ─── Commits ───
 
   function renderCommits(log, newHash) {
     commitLog = log;
@@ -529,19 +819,18 @@
     for (const c of reversed) {
       const div = document.createElement("div");
       div.className = "commit-item" + (c.hash === newHash ? " new" : "");
-      div.innerHTML = `
-        <div class="commit-hash">${c.hash}</div>
-        <div class="commit-msg">${escapeHtml(c.message)}</div>
-        <div class="commit-time">#${c.index + 1}</div>
-      `;
+      div.innerHTML =
+        '<div class="commit-hash">' + c.hash + '</div>' +
+        '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
+        '<div class="commit-time">#' + (c.index + 1) + '</div>';
       div.addEventListener("click", () => {
-        fetch(`/api/snapshot/${c.hash}`)
+        fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash)
           .then(r => r.json())
           .then(d => {
             editor.value = d.content;
             document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
             div.classList.add("active");
-            showToast(`viewing ${c.hash}`);
+            showToast("viewing " + c.hash);
           });
       });
       commitList.appendChild(div);
@@ -552,61 +841,10 @@
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
-  function connect() {
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${proto}//${location.host}`);
-
-    ws.onopen = () => {
-      connDot.className = "connection-dot connected";
-      connLabel.textContent = "connected";
-      status.textContent = "ready";
-      status.className = "status-pill";
-    };
-
-    ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
-
-      if (msg.type === "init") {
-        editor.value = msg.content;
-        filename.textContent = msg.filename;
-        pauseThreshold = msg.pauseThreshold;
-        thresholdSlider.value = pauseThreshold;
-        thresholdValue.textContent = (pauseThreshold / 1000).toFixed(1) + "s";
-        renderCommits(msg.log);
-      }
-
-      if (msg.type === "committed") {
-        status.textContent = `committed ${msg.hash}`;
-        status.className = "status-pill committed";
-        renderCommits(msg.log, msg.hash);
-        showToast(`${msg.hash} — ${msg.message}`);
-        setTimeout(() => {
-          status.textContent = "ready";
-          status.className = "status-pill";
-        }, 2000);
-      }
-
-      if (msg.type === "threshold-changed") {
-        pauseThreshold = msg.value;
-        thresholdSlider.value = msg.value;
-        thresholdValue.textContent = (msg.value / 1000).toFixed(1) + "s";
-      }
-    };
-
-    ws.onclose = () => {
-      connDot.className = "connection-dot disconnected";
-      connLabel.textContent = "disconnected";
-      status.textContent = "offline";
-      status.className = "status-pill";
-      setTimeout(connect, 3000);
-    };
-
-    ws.onerror = () => ws.close();
-  }
-
-  connect();
+  // ─── Editor events ───
 
   editor.addEventListener("input", () => {
+    if (editor.readOnly) return;
     lastKeystroke = Date.now();
     isTyping = true;
     status.textContent = "writing";
@@ -643,18 +881,19 @@
   });
 
   exportBtn.addEventListener("click", async () => {
+    if (!currentDocId) return;
     try {
-      const log = await fetch("/api/log").then(r => r.json());
+      const log = await fetch("/api/documents/" + currentDocId + "/log").then(r => r.json());
       const snapshots = [];
       for (const c of log) {
-        const snap = await fetch(`/api/snapshot/${c.hash}`).then(r => r.json());
+        const snap = await fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash).then(r => r.json());
         snapshots.push({ ...c, content: snap.content });
       }
       const blob = new Blob([JSON.stringify(snapshots, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `drift-export-${Date.now()}.json`;
+      a.download = "drift-export-" + Date.now() + ".json";
       a.click();
       URL.revokeObjectURL(url);
       showToast("exported " + log.length + " snapshots");
@@ -669,15 +908,19 @@
   });
 
   editor.addEventListener("focus", () => {
+    if (!currentDocId) return;
     document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
     if (ws && ws.readyState === 1) {
-      fetch("/api/file").then(r => r.json()).then(d => {
+      fetch("/api/documents/" + currentDocId + "/file").then(r => r.json()).then(d => {
         editor.value = d.content;
       });
     }
     status.textContent = "ready";
     status.className = "status-pill";
   });
+
+  // ─── Init: route on load ───
+  route();
 })();
 </script>
 </body>
