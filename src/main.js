@@ -21,6 +21,10 @@ const pauseLabel = document.getElementById("pauseLabel");
 const connDot = document.getElementById("connDot");
 const connLabel = document.getElementById("connLabel");
 const toast = document.getElementById("toast");
+const diffPanel = document.getElementById("diffPanel");
+const diffTitle = document.getElementById("diffTitle");
+const diffBody = document.getElementById("diffBody");
+const diffClose = document.getElementById("diffClose");
 
 let ws;
 let currentDocId = null;
@@ -248,18 +252,78 @@ function renderCommits(log, newHash) {
       '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
       '<div class="commit-time">#' + (c.index + 1) + '</div>';
     div.addEventListener("click", () => {
+      document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
+      div.classList.add("active");
+
+      // Fetch snapshot
       fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash)
         .then(r => r.json())
         .then(d => {
           editor.value = d.content;
-          document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
-          div.classList.add("active");
           showToast("viewing " + c.hash);
         });
+
+      // Fetch and show diff if there's a previous commit
+      if (c.index > 0) {
+        const prev = log[c.index - 1];
+        fetchAndShowDiff(prev.hash, c.hash, c);
+      } else {
+        // First commit — show it as all-added
+        showFirstCommitDiff(c.hash, c);
+      }
     });
     commitList.appendChild(div);
   }
 }
+
+// ─── Diff panel ───
+
+function fetchAndShowDiff(hashA, hashB, commit) {
+  fetch("/api/documents/" + currentDocId + "/structured-diff/" + hashA + "/" + hashB)
+    .then(r => r.json())
+    .then(d => {
+      renderDiff(d.segments, commit);
+    })
+    .catch(() => {
+      diffPanel.classList.add("hidden");
+    });
+}
+
+function showFirstCommitDiff(hash, commit) {
+  fetch("/api/documents/" + currentDocId + "/snapshot/" + hash)
+    .then(r => r.json())
+    .then(d => {
+      const segments = d.content
+        ? [{ type: "added", text: d.content }]
+        : [];
+      renderDiff(segments, commit);
+    });
+}
+
+function renderDiff(segments, commit) {
+  if (!segments || segments.length === 0) {
+    diffPanel.classList.add("hidden");
+    return;
+  }
+
+  diffTitle.textContent = commit.hash + " — " + commit.message;
+  diffBody.innerHTML = "";
+
+  for (const seg of segments) {
+    const span = document.createElement("span");
+    span.className = "diff-seg diff-" + seg.type;
+    span.textContent = seg.text;
+    diffBody.appendChild(span);
+  }
+
+  diffPanel.classList.remove("hidden");
+}
+
+function closeDiff() {
+  diffPanel.classList.add("hidden");
+}
+
+diffClose.addEventListener("click", closeDiff);
 
 // ─── Editor events ───
 
@@ -330,6 +394,7 @@ editor.addEventListener("blur", () => {
 editor.addEventListener("focus", () => {
   if (!currentDocId) return;
   document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
+  closeDiff();
   if (ws && ws.readyState === 1) {
     fetch("/api/documents/" + currentDocId + "/file").then(r => r.json()).then(d => {
       editor.value = d.content;
