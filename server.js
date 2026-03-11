@@ -70,7 +70,12 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+
+// Serve Vite build output if available, otherwise fall back to public/
+const fs = require("fs");
+const distDir = path.join(__dirname, "dist");
+const staticDir = fs.existsSync(distDir) ? distDir : path.join(__dirname, "public");
+app.use(express.static(staticDir));
 
 // Document CRUD
 
@@ -131,7 +136,7 @@ app.get("/api/documents/:docId/diff/:a/:b", async (req, res) => {
 
 // Catch-all: serve index.html for client-side routing
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(staticDir, "index.html"));
 });
 
 // ─── WebSocket ───

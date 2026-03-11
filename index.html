@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>drift</title>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- ─── Dashboard View ─── -->
+<div class="dashboard" id="dashboardView">
+  <div class="dashboard-header">
+    <div class="dashboard-title">drift</div>
+    <div class="dashboard-subtitle">your poems</div>
+  </div>
+  <button class="new-poem-btn" id="newPoemBtn">+ new poem</button>
+  <div class="doc-list" id="docList">
+    <div class="doc-empty">no poems yet. start one.</div>
+  </div>
+</div>
+
+<!-- ─── Editor View ─── -->
+<div class="app hidden" id="editorView">
+  <div class="editor-pane">
+    <div class="editor-header">
+      <span class="editor-title" id="backBtn">drift</span>
+      <span class="editor-filename" id="filename">poem.txt</span>
+      <span class="status-pill" id="status">connecting</span>
+    </div>
+    <div class="editor-area">
+      <textarea
+        id="editor"
+        placeholder="begin writing. drift commits when you pause."
+        spellcheck="false"
+        autofocus
+      ></textarea>
+    </div>
+
+    <div class="pause-ring" id="pauseRing">
+      <svg viewBox="0 0 36 36">
+        <circle class="track" cx="18" cy="18" r="14" />
+        <circle class="fill" id="pauseFill" cx="18" cy="18" r="14" />
+      </svg>
+    </div>
+    <div class="pause-ring-label" id="pauseLabel">pause &rarr; commit</div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-title">commit history</div>
+    <div class="commit-count">
+      <span id="commitCountNum">0</span>
+      snapshots
+    </div>
+    <div class="commits" id="commitList"></div>
+
+    <div class="settings">
+      <div class="setting-row">
+        <span class="setting-label">pause threshold</span>
+        <span class="setting-value" id="thresholdValue">3.0s</span>
+      </div>
+      <input type="range" id="thresholdSlider" min="500" max="15000" step="250" value="3000">
+      <button class="btn" id="forceCommitBtn">commit now</button>
+      <button class="btn" id="exportBtn" style="margin-top: 4px;">export history</button>
+    </div>
+  </div>
+</div>
+
+<div class="connection hidden" id="connStatus">
+  <div class="connection-dot" id="connDot"></div>
+  <span id="connLabel">connecting</span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

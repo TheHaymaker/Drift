@@ -2,3 +2,4 @@ node_modules/
 poem-repo/
 poem-atoms.json
 data/
+dist/
