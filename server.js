@@ -23,7 +23,7 @@ const GitOps = require("./lib/GitOps");
 const Session = require("./lib/Session");
 const DocumentStore = require("./lib/DocumentStore");
 
-const PORT = parseInt(process.argv[2] || "3377", 10);
+const PORT = parseInt(process.env.PORT || process.argv[2] || "3377", 10);
 const EVICTION_DELAY = 60_000; // 60s grace period before evicting idle sessions
 
 // ─── Session map ───
@@ -215,7 +215,7 @@ wss.on("connection", (ws) => {
 (async () => {
   await migrateLegacyRepo();
 
-  server.listen(PORT, () => {
+  server.listen(PORT, "0.0.0.0", () => {
     const docs = DocumentStore.listDocuments();
     console.log(`
 ┌─────────────────────────────────────┐

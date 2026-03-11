@@ -1,0 +1,6 @@
+node_modules/
+data/
+poem-repo/
+poem-atoms.json
+.git/
+.gitignore
