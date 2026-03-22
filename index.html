@@ -69,6 +69,7 @@
       </div>
       <input type="range" id="thresholdSlider" min="500" max="15000" step="250" value="3000">
       <button class="btn" id="forceCommitBtn">commit now</button>
+      <button class="btn" id="playbackBtn" style="margin-top: 4px;">&#9654; play back</button>
       <button class="btn" id="exportBtn" style="margin-top: 4px;">export history</button>
     </div>
   </div>
@@ -78,6 +79,9 @@
   <div class="connection-dot" id="connDot"></div>
   <span id="connLabel">connecting</span>
 </div>
+
+<!-- ─── Playback View (React mount) ─── -->
+<div class="hidden" id="playbackView"></div>
 
 <div class="toast" id="toast"></div>
 
