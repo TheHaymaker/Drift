@@ -241,6 +241,9 @@ body {
 .editor-area {
   flex: 1;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 textarea {
@@ -1317,4 +1320,309 @@ input[type="range"]::-webkit-slider-thumb {
     gap: 20px;
     padding: 24px 20px;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SYLLABLE EDITOR
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.syl-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+/* ── Mode bar ── */
+.syl-modebar {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 16px 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.syl-form-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.syl-form-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+
+.syl-modebar-right {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.syl-toggle-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.syl-toggle-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.syl-toggle-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(160, 140, 106, 0.08);
+}
+
+/* ── Body (gutter + content) ── */
+.syl-body {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ── Left gutter ── */
+.syl-gutter {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 0 28px 16px;
+  gap: 0;
+  user-select: none;
+}
+
+.syl-gutter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  /* Height matches one syl-line (overlay row + text row) */
+  height: calc(1.15em + 1.7em); /* brace region + text line-height */
+  padding-bottom: 0;
+}
+
+.gutter-sylcount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  min-width: 1.6em;
+  text-align: right;
+  transition: color 0.2s;
+}
+
+.gutter-sylcount.g-match { color: var(--green); }
+.gutter-sylcount.g-close { color: var(--amber); }
+.gutter-sylcount.g-miss  { color: var(--red);   opacity: 0.7; }
+
+.gutter-empty {
+  opacity: 0.3;
+}
+
+.gutter-linenum {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  min-width: 1.4em;
+  text-align: right;
+  opacity: 0.45;
+}
+
+/* ── Contenteditable content area ── */
+.syl-content {
+  flex: 1;
+  padding: 28px 40px 28px 12px;
+  outline: none;
+  caret-color: var(--text);
+  overflow: visible;
+}
+
+/* ── One poem line ── */
+.syl-line {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Overlay row (aria-hidden, non-editable) ── */
+.syl-overlay-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+  /* Small vertical gap below the braces before the text row */
+  margin-bottom: 2px;
+}
+
+/* ── Space token in overlay ── */
+.syl-ospace {
+  display: inline-flex;
+  align-self: flex-end;
+  visibility: hidden; /* preserve space width, brace not needed for spaces */
+  white-space: pre;
+}
+
+/* ── Word group in overlay ── */
+.syl-oword {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: flex-end;
+}
+
+/* ── Single syllable column: brace on top, ghost text below ── */
+.syl-unit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  color: var(--accent);
+  opacity: 0.65;
+}
+
+/* Scalable over-brace SVG */
+.syl-brace {
+  display: block;
+  min-width: 6px;
+}
+
+/* Ghost text: invisible but occupies correct width to size the brace */
+.syl-ghost {
+  visibility: hidden;
+  white-space: pre;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.25rem;
+  line-height: 0; /* no extra height; brace SVG sets the height */
+}
+
+/* ── Text row (the editable content) ── */
+.syl-text-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-bottom: 6px; /* breathing room between lines */
+}
+
+.syl-text-row > span {
+  white-space: pre;
+}
+
+/* ── Haiku status strip ── */
+.haiku-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.haiku-status.haiku-complete {
+  background: rgba(74, 222, 128, 0.04);
+}
+
+.haiku-label {
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.52rem;
+}
+
+.haiku-sep {
+  color: var(--text-faint);
+}
+
+.haiku-beat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+}
+
+.beat-actual {
+  color: var(--text-dim);
+  font-size: 0.65rem;
+}
+
+.beat-slash {
+  color: var(--text-faint);
+  font-size: 0.5rem;
+}
+
+.beat-target {
+  color: var(--text-faint);
+  font-size: 0.52rem;
+}
+
+.haiku-beat.beat-met .beat-actual {
+  color: var(--green);
+}
+
+.haiku-check {
+  margin-left: 4px;
+  color: var(--green);
+  font-size: 0.7rem;
+}
+
+/* ── Mode toggle button in editor header ── */
+.syl-mode-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-left: 8px;
+}
+
+.syl-mode-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.syl-mode-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(160, 140, 106, 0.08);
+}
+
+/* ── Syllable editor takes over the editor-area ── */
+#syllableEditorMount {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+#syllableEditorMount.visible {
+  display: flex;
 }

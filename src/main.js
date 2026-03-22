@@ -1,7 +1,8 @@
 import "./style.css";
-import { createElement } from "react";
+import { createElement, useState, useCallback, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import Playback from "./Playback.jsx";
+import SyllableEditor from "./SyllableEditor.jsx";
 import { createGitClient } from "./git-client.js";
 import { createSyncClient } from "./sync.js";
 
@@ -69,6 +70,8 @@ const diffPanel = document.getElementById("diffPanel");
 const diffTitle = document.getElementById("diffTitle");
 const diffBody = document.getElementById("diffBody");
 const diffClose = document.getElementById("diffClose");
+const sylModeBtn = document.getElementById("sylModeBtn");
+const syllableEditorMount = document.getElementById("syllableEditorMount");
 
 let ws;
 let currentDocId = null;
@@ -77,6 +80,71 @@ let lastKeystroke = 0;
 let animFrame;
 let isTyping = false;
 let commitLog = [];
+
+// ─── Syllable Editor ───
+let syllableEditorRoot = null;
+let sylModeActive = false;
+
+function mountSyllableEditor() {
+  if (!syllableEditorRoot) {
+    syllableEditorRoot = createRoot(syllableEditorMount);
+  }
+  // SyllableEditorWrapper is a thin stateful bridge that reads editor.value
+  // and routes changes back through the native textarea event system.
+  function SyllableEditorWrapper() {
+    const [text, setText] = useState(editor.value);
+
+    // Keep in sync when the textarea is updated externally (e.g. commit history
+    // click, WS init) by listening to a custom event dispatched by setEditorContent().
+    useEffect(() => {
+      const sync = () => setText(editor.value);
+      editor.addEventListener("_syl-sync", sync);
+      return () => editor.removeEventListener("_syl-sync", sync);
+    }, []);
+
+    const handleChange = useCallback((newText) => {
+      setText(newText);
+      editor.value = newText;
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    }, []);
+
+    return createElement(SyllableEditor, { value: text, onChange: handleChange });
+  }
+
+  syllableEditorRoot.render(createElement(SyllableEditorWrapper));
+}
+
+function unmountSyllableEditor() {
+  if (syllableEditorRoot) {
+    syllableEditorRoot.render(null);
+  }
+}
+
+function setSylMode(active) {
+  sylModeActive = active;
+  if (active) {
+    editor.style.display = "none";
+    syllableEditorMount.classList.add("visible");
+    sylModeBtn.classList.add("active");
+    mountSyllableEditor();
+  } else {
+    editor.style.display = "";
+    syllableEditorMount.classList.remove("visible");
+    sylModeBtn.classList.remove("active");
+    unmountSyllableEditor();
+    editor.focus();
+  }
+}
+
+sylModeBtn.addEventListener("click", () => setSylMode(!sylModeActive));
+
+// Helper: update textarea value and notify syllable editor if active.
+function setEditorContent(content) {
+  editor.value = content;
+  if (sylModeActive) {
+    editor.dispatchEvent(new CustomEvent("_syl-sync"));
+  }
+}
 
 // ─── Router ───
 
@@ -335,7 +403,7 @@ function connectWs(docId) {
     const msg = JSON.parse(e.data);
 
     if (msg.type === "init") {
-      editor.value = msg.content;
+      setEditorContent(msg.content);
       currentFilename = msg.filename;
       filenameEl.textContent = msg.filename;
       pauseThreshold = msg.pauseThreshold;
@@ -458,19 +526,19 @@ function renderCommits(log, newHash) {
       if (gitClient && currentDocId && currentFilename) {
         try {
           const snap = await gitClient.getFileAt({ docId: currentDocId, filename: currentFilename, hash: c.hash });
-          editor.value = snap.content;
+          setEditorContent(snap.content);
           showToast("viewing " + c.hash);
         } catch {
           // Fall back to server
           const d = await fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash).then(r => r.json());
-          editor.value = d.content;
+          setEditorContent(d.content);
           showToast("viewing " + c.hash);
         }
       } else {
         fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash)
           .then(r => r.json())
           .then(d => {
-            editor.value = d.content;
+            setEditorContent(d.content);
             showToast("viewing " + c.hash);
           });
       }
@@ -736,15 +804,15 @@ editor.addEventListener("focus", async () => {
   if (gitClient && currentDocId && currentFilename) {
     try {
       const result = await gitClient.readFile({ docId: currentDocId, filename: currentFilename });
-      editor.value = result.content;
+      setEditorContent(result.content);
     } catch {
       // Fall back to server
       const d = await fetch("/api/documents/" + currentDocId + "/file").then(r => r.json());
-      editor.value = d.content;
+      setEditorContent(d.content);
     }
   } else if (ws && ws.readyState === 1) {
     fetch("/api/documents/" + currentDocId + "/file").then(r => r.json()).then(d => {
-      editor.value = d.content;
+      setEditorContent(d.content);
     });
   }
   status.textContent = "ready";
