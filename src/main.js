@@ -237,6 +237,7 @@ function stopTypingAnimation() {
     clearTimeout(typingTimer);
     typingTimer = null;
   }
+  destroyDemo();
 }
 
 function startTypingAnimation() {
@@ -292,6 +293,163 @@ function showLanding() {
   document.title = "drift \u2014 where every pause is a verse";
   updateLandingNav();
   startTypingAnimation();
+  initDemo();
+}
+
+// ─── Interactive Demo ───
+
+let demoLastKeystroke = 0;
+let demoIsTyping = false;
+let demoAnimFrame = null;
+let demoCommits = [];
+let demoPrevWordCount = 0;
+const demoThreshold = 2500;
+let demoInputHandler = null;
+
+function wordCount(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
+function demoHash() {
+  return Math.random().toString(16).slice(2, 9);
+}
+
+function initDemo() {
+  destroyDemo();
+
+  const demoEditor = document.getElementById("demoEditor");
+  const demoFill = document.getElementById("demoFill");
+  const demoRingLabel = document.getElementById("demoRingLabel");
+  const demoStatus = document.getElementById("demoStatus");
+  const demoCommitsEl = document.getElementById("demoCommits");
+  const demoCommitCount = document.getElementById("demoCommitCount");
+  const demoHint = document.getElementById("demoHint");
+  const demoToast = document.getElementById("demoToast");
+
+  if (!demoEditor) return;
+
+  demoCommits = [];
+  demoPrevWordCount = 0;
+  demoIsTyping = false;
+  demoLastKeystroke = 0;
+  demoEditor.value = "";
+  demoCommitsEl.innerHTML = '<div class="demo-empty">your snapshots will appear here.</div>';
+  demoCommitCount.textContent = "0";
+  demoStatus.textContent = "ready";
+  demoStatus.className = "status-pill";
+  demoFill.style.strokeDashoffset = 88;
+  demoRingLabel.textContent = "pause \u2192 commit";
+  demoHint.textContent = "";
+
+  demoInputHandler = () => {
+    demoLastKeystroke = Date.now();
+    demoIsTyping = true;
+    demoStatus.textContent = "writing";
+    demoStatus.className = "status-pill typing";
+  };
+
+  demoEditor.addEventListener("input", demoInputHandler);
+
+  function showDemoToast(msg) {
+    demoToast.textContent = msg;
+    demoToast.classList.add("show");
+    setTimeout(() => demoToast.classList.remove("show"), 2200);
+  }
+
+  function demoCommit() {
+    const content = demoEditor.value;
+    const wc = wordCount(content);
+    const hash = demoHash();
+    let message;
+
+    if (demoCommits.length === 0) {
+      message = "first draft";
+    } else {
+      const diff = wc - demoPrevWordCount;
+      if (diff > 0) message = "+" + diff + " words";
+      else if (diff < 0) message = diff + " words";
+      else message = "revised";
+    }
+
+    demoPrevWordCount = wc;
+    const commit = { hash, message, index: demoCommits.length };
+    demoCommits.push(commit);
+
+    // Update commit count
+    demoCommitCount.textContent = demoCommits.length;
+
+    // Clear empty state and prepend commit
+    const emptyEl = demoCommitsEl.querySelector(".demo-empty");
+    if (emptyEl) emptyEl.remove();
+
+    const div = document.createElement("div");
+    div.className = "demo-commit-item new";
+    div.innerHTML =
+      '<div class="demo-commit-hash">' + hash + '</div>' +
+      '<div class="demo-commit-msg">' + message + '</div>';
+    demoCommitsEl.prepend(div);
+
+    // Status pill flash
+    demoStatus.textContent = "committed " + hash;
+    demoStatus.className = "status-pill committed";
+    setTimeout(() => {
+      demoStatus.textContent = "ready";
+      demoStatus.className = "status-pill";
+    }, 2000);
+
+    // Toast
+    showDemoToast(hash + " \u2014 " + message);
+
+    // Coaching hints
+    const count = demoCommits.length;
+    if (count === 1) {
+      demoHint.textContent = "Your first snapshot! Keep going\u2026";
+    } else if (count === 2) {
+      demoHint.textContent = "See how each pause captures your progress?";
+    } else if (count === 3) {
+      demoHint.textContent = "Every pause is a verse.";
+    }
+  }
+
+  function updateDemoRing() {
+    const now = Date.now();
+    const elapsed = now - demoLastKeystroke;
+
+    if (demoIsTyping && elapsed < demoThreshold) {
+      const progress = elapsed / demoThreshold;
+      const offset = 88 * (1 - progress);
+      demoFill.style.strokeDashoffset = offset;
+      demoRingLabel.textContent = ((demoThreshold - elapsed) / 1000).toFixed(1) + "s \u2192 commit";
+    } else if (demoIsTyping && elapsed >= demoThreshold) {
+      demoFill.style.strokeDashoffset = 0;
+      demoIsTyping = false;
+      demoCommit();
+    } else {
+      demoFill.style.strokeDashoffset = 88;
+      demoRingLabel.textContent = "pause \u2192 commit";
+    }
+
+    demoAnimFrame = requestAnimationFrame(updateDemoRing);
+  }
+
+  demoAnimFrame = requestAnimationFrame(updateDemoRing);
+}
+
+function destroyDemo() {
+  if (demoAnimFrame) {
+    cancelAnimationFrame(demoAnimFrame);
+    demoAnimFrame = null;
+  }
+  if (demoInputHandler) {
+    const demoEditor = document.getElementById("demoEditor");
+    if (demoEditor) demoEditor.removeEventListener("input", demoInputHandler);
+    demoInputHandler = null;
+  }
+  demoCommits = [];
+  demoPrevWordCount = 0;
+  demoIsTyping = false;
 }
 
 function updateLandingNav() {
