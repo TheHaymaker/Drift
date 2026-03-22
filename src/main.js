@@ -1,4 +1,36 @@
 import "./style.css";
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
+import Playback from "./Playback.jsx";
+
+// ─── Playback mount ───
+let playbackRoot = null;
+const playbackContainer = document.getElementById("playbackView");
+
+function mountPlayback(docId) {
+  document.getElementById("dashboardView").classList.add("hidden");
+  document.getElementById("editorView").classList.add("hidden");
+  document.getElementById("connStatus").classList.add("hidden");
+  playbackContainer.classList.remove("hidden");
+  document.title = "drift \u2014 playback";
+
+  if (!playbackRoot) {
+    playbackRoot = createRoot(playbackContainer);
+  }
+  playbackRoot.render(
+    createElement(Playback, {
+      docId,
+      onBack: () => { location.hash = "#/"; },
+    })
+  );
+}
+
+function unmountPlayback() {
+  playbackContainer.classList.add("hidden");
+  if (playbackRoot) {
+    playbackRoot.render(null);
+  }
+}
 
 // ─── DOM refs ───
 const dashboardView = document.getElementById("dashboardView");
@@ -51,12 +83,18 @@ function navigate(hash) {
 
 function route() {
   const r = getRoute();
-  if (r.view === "write") {
-    showEditor(r.docId);
-  } else if (r.view === "read") {
-    showEditor(r.docId, true);
+  if (r.view === "read") {
+    disconnectWs();
+    currentDocId = null;
+    unmountPlayback();
+    mountPlayback(r.docId);
   } else {
-    showDashboard();
+    unmountPlayback();
+    if (r.view === "write") {
+      showEditor(r.docId);
+    } else {
+      showDashboard();
+    }
   }
 }
 
@@ -91,10 +129,17 @@ async function loadDocList() {
       div.className = "doc-item";
       const modified = doc.last_modified ? new Date(doc.last_modified + "Z").toLocaleDateString() : "";
       div.innerHTML = `
-        <span class="doc-item-title">${escapeHtml(doc.title || "untitled")}</span>
-        <span class="doc-item-meta">${escapeHtml(doc.filename)} &middot; ${modified}</span>
+        <div class="doc-item-info">
+          <span class="doc-item-title">${escapeHtml(doc.title || "untitled")}</span>
+          <span class="doc-item-meta">${escapeHtml(doc.filename)} &middot; ${modified}</span>
+        </div>
+        <button class="doc-play-btn" title="play back this poem">&#9654;</button>
       `;
-      div.addEventListener("click", () => navigate("#/write/" + doc.doc_id));
+      div.querySelector(".doc-item-info").addEventListener("click", () => navigate("#/write/" + doc.doc_id));
+      div.querySelector(".doc-play-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        navigate("#/read/" + doc.doc_id);
+      });
       docList.appendChild(div);
     }
   } catch (e) {
@@ -362,6 +407,10 @@ forceCommitBtn.addEventListener("click", () => {
   if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: "force-commit" }));
   }
+});
+
+document.getElementById("playbackBtn").addEventListener("click", () => {
+  if (currentDocId) navigate("#/read/" + currentDocId);
 });
 
 exportBtn.addEventListener("click", async () => {

@@ -141,6 +141,31 @@ app.get("/api/documents/:docId/structured-diff/:a/:b", async (req, res) => {
   res.json({ segments });
 });
 
+app.get("/api/documents/:docId/playback", async (req, res) => {
+  const doc = DocumentStore.getDocument(req.params.docId);
+  if (!doc) return res.status(404).json({ error: "not found" });
+  try {
+    const log = await GitOps.getLog(doc.repoPath, doc.filename);
+    if (log.length === 0) return res.json({ commits: [] });
+    const commits = [];
+    for (const c of log) {
+      const content = await GitOps.getFileAt(doc.repoPath, c.hash, doc.filename);
+      const lines = content.split("\n");
+      if (lines[lines.length - 1] === "") lines.pop();
+      commits.push({
+        hash: c.hash.slice(0, 7),
+        message: c.message,
+        date: c.date || "",
+        lines,
+      });
+    }
+    res.json({ commits });
+  } catch (e) {
+    console.error("  playback data failed:", e.message);
+    res.status(500).json({ error: "failed to generate playback data" });
+  }
+});
+
 // Catch-all: serve index.html for client-side routing
 app.get("*", (req, res) => {
   res.sendFile(path.join(staticDir, "index.html"));
