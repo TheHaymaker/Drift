@@ -134,6 +134,13 @@ app.get("/api/documents/:docId/diff/:a/:b", async (req, res) => {
   res.json({ diff });
 });
 
+app.get("/api/documents/:docId/structured-diff/:a/:b", async (req, res) => {
+  const doc = DocumentStore.getDocument(req.params.docId);
+  if (!doc) return res.status(404).json({ error: "not found" });
+  const segments = await GitOps.getStructuredDiff(doc.repoPath, req.params.a, req.params.b, doc.filename);
+  res.json({ segments });
+});
+
 // Catch-all: serve index.html for client-side routing
 app.get("*", (req, res) => {
   res.sendFile(path.join(staticDir, "index.html"));
