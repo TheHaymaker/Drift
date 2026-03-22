@@ -32,8 +32,8 @@
     <div class="landing-nav-links">
       <a href="#features" class="landing-nav-link">Features</a>
       <a href="#about" class="landing-nav-link">About</a>
-      <a href="#signin" class="landing-nav-link">Sign In</a>
-      <a href="#/poems" class="landing-nav-cta">Start Writing</a>
+      <a href="#signin" class="landing-nav-link" id="landingSignInLink">Log In / Sign Up</a>
+      <a href="#/poems" class="landing-nav-cta" id="landingStartWriting">Start Writing</a>
     </div>
   </nav>
 
@@ -154,7 +154,7 @@
     <h2 class="landing-cta-heading"><em>Your words are waiting.</em></h2>
     <p class="landing-cta-sub">Join the growing community of poets who value the process as much as the poem.</p>
     <div class="landing-cta-buttons">
-      <a href="#/poems" class="landing-btn-primary">Start Writing for Free</a>
+      <a href="#/poems" class="landing-btn-primary" id="landingCtaStart">Start Writing for Free</a>
       <a href="#about" class="landing-btn-secondary">View Demo</a>
     </div>
   </section>
@@ -177,7 +177,7 @@
 <!-- ─── Dashboard View ─── -->
 <div class="dashboard hidden" id="dashboardView">
   <div class="dashboard-header">
-    <div class="dashboard-title">drift</div>
+    <a class="dashboard-title dashboard-home-link" id="dashboardHomeBtn" href="#/">drift</a>
     <div class="dashboard-subtitle" id="dashboardSubtitle">your poems</div>
     <button class="auth-toggle logout-btn" id="logoutBtn">log out</button>
   </div>
