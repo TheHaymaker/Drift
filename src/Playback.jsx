@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createHighlighter } from "shiki";
+import { ShikiMagicMove } from "shiki-magic-move/react";
+import "shiki-magic-move/style.css";
 import { buildFrames } from "./build-frames.js";
 
 // ─── Layout constants ───
@@ -165,8 +168,88 @@ function AtomsRenderer({ frames, currentIndex, prevIndex, t }) {
   );
 }
 
+// ─── Magic Move Renderer ───
+function MagicMoveRenderer({ commits, currentIndex }) {
+  const [highlighter, setHighlighter] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    createHighlighter({
+      themes: ["vitesse-dark"],
+      langs: ["text"],
+    }).then((hl) => {
+      if (!cancelled) setHighlighter(hl);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!highlighter) {
+    return (
+      <div style={{
+        width: "100%",
+        maxWidth: "580px",
+        minHeight: "200px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "0.68rem",
+        color: "#4a4030",
+      }}>
+        loading highlighter&hellip;
+      </div>
+    );
+  }
+
+  const code = commits[currentIndex].lines.join("\n");
+
+  return (
+    <div className="magic-move-wrapper" style={{
+      width: "100%",
+      maxWidth: "580px",
+      position: "relative",
+      zIndex: 1,
+    }}>
+      <style>{`
+        .magic-move-wrapper .shiki-magic-move-container {
+          background: transparent !important;
+          padding: 16px 32px;
+        }
+        .magic-move-wrapper pre,
+        .magic-move-wrapper code {
+          font-family: 'EB Garamond', Georgia, serif !important;
+          font-size: 1.45rem !important;
+          line-height: 42px !important;
+          letter-spacing: 0.01em !important;
+          background: transparent !important;
+        }
+        .magic-move-wrapper .shiki-magic-move-container span {
+          color: #d4c5a9 !important;
+        }
+        .magic-move-wrapper .shiki-magic-move-enter-active {
+          color: #4ade80 !important;
+        }
+        .magic-move-wrapper .shiki-magic-move-leave-active {
+          color: #f87171 !important;
+        }
+      `}</style>
+      <ShikiMagicMove
+        highlighter={highlighter}
+        code={code}
+        lang="text"
+        theme="vitesse-dark"
+        options={{
+          duration: 800,
+          stagger: 0.03,
+          lineNumbers: false,
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Nav ───
-function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay }) {
+function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay, mode, onToggleMode }) {
   const ci = currentIndex;
 
   const nav = useCallback(
@@ -185,11 +268,14 @@ function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay })
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         nav(ci - 1);
+      } else if (e.key === "m") {
+        e.preventDefault();
+        onToggleMode?.();
       }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [ci, nav]);
+  }, [ci, nav, onToggleMode]);
 
   const commit = commits[ci];
 
@@ -284,12 +370,19 @@ function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay })
             next &rarr;
           </button>
         </div>
-        <div style={{
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: "0.54rem",
-          color: "#3a3530",
-        }}>
-          &larr; &rarr; or spacebar to navigate
+        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "0.54rem",
+            color: "#3a3530",
+          }}>
+            &larr; &rarr; or spacebar &bull; press m to switch mode
+          </div>
+          {onToggleMode && (
+            <button style={btn(false)} onClick={onToggleMode}>
+              {mode === "atoms" ? "magic-move" : "atoms"}
+            </button>
+          )}
         </div>
       </div>
     </>
@@ -303,6 +396,7 @@ export default function Playback({ docId, onBack }) {
   const [ci, setCi] = useState(0);
   const [prevCi, setPrevCi] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState("magic-move");
   const { t, go } = useAnim(1100);
   const prevRef = useRef(0);
   const ivRef = useRef(null);
@@ -443,16 +537,25 @@ export default function Playback({ docId, onBack }) {
           textTransform: "uppercase",
           color: "#4a4030",
         }}>
-          playback
+          {mode === "magic-move"
+            ? "git log \u2014 shiki magic move"
+            : "git log --word-diff-regex=. \u2014 atoms in revision"}
         </span>
       </div>
 
-      <AtomsRenderer
-        frames={data.frames}
-        currentIndex={ci}
-        prevIndex={prevCi}
-        t={t}
-      />
+      {mode === "atoms" ? (
+        <AtomsRenderer
+          frames={data.frames}
+          currentIndex={ci}
+          prevIndex={prevCi}
+          t={t}
+        />
+      ) : (
+        <MagicMoveRenderer
+          commits={data.commits}
+          currentIndex={ci}
+        />
+      )}
 
       <CommitNav
         commits={data.commits}
@@ -463,6 +566,8 @@ export default function Playback({ docId, onBack }) {
           if (ci >= data.commits.length - 1) handleNavigate(0);
           setPlaying(p => !p);
         }}
+        mode={mode}
+        onToggleMode={() => setMode(m => m === "atoms" ? "magic-move" : "atoms")}
       />
     </div>
   );
