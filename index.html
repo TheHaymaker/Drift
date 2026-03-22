@@ -9,11 +9,27 @@
 
 <div class="grain"></div>
 
+<!-- ─── Auth View ─── -->
+<div class="auth-view" id="authView">
+  <div class="auth-container">
+    <div class="dashboard-title">drift</div>
+    <div class="dashboard-subtitle">a writing instrument</div>
+    <form id="authForm" autocomplete="on">
+      <input type="text" id="authUsername" placeholder="username" autocomplete="username" />
+      <input type="password" id="authPassword" placeholder="password" autocomplete="current-password" />
+      <button type="submit" class="new-poem-btn" id="authSubmit">log in</button>
+      <button type="button" class="auth-toggle" id="authToggle">need an account? register</button>
+    </form>
+    <div id="authError" class="auth-error"></div>
+  </div>
+</div>
+
 <!-- ─── Dashboard View ─── -->
-<div class="dashboard" id="dashboardView">
+<div class="dashboard hidden" id="dashboardView">
   <div class="dashboard-header">
     <div class="dashboard-title">drift</div>
-    <div class="dashboard-subtitle">your poems</div>
+    <div class="dashboard-subtitle" id="dashboardSubtitle">your poems</div>
+    <button class="auth-toggle logout-btn" id="logoutBtn">log out</button>
   </div>
   <button class="new-poem-btn" id="newPoemBtn">+ new poem</button>
   <div class="doc-list" id="docList">
