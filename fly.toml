@@ -1,22 +1,23 @@
-app = "drift-poems"
-primary_region = "ord"
+# fly.toml app configuration file generated for app-cool-sun-1542 on 2026-03-22T04:38:44Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'app-cool-sun-1542'
+primary_region = 'iad'
 
 [build]
 
-[env]
-  DRIFT_DATA_DIR = "/data"
-
 [http_service]
-  internal_port = 3377
+  internal_port = 8080
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
+  processes = ['app']
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
-
-[mounts]
-  source = "drift_data"
-  destination = "/data"
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256
