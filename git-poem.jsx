@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import CommitNav from "./git-poem-nav.jsx";
+import MagicMoveRenderer from "./git-poem-magic.jsx";
 
 /*
   Atom-level poem renderer.
@@ -375,16 +377,54 @@ function WordAtom({ atom, prevAtom, t }) {
   );
 }
 
+// ─── Atoms Renderer ───
+function AtomsRenderer({ frames, currentIndex, prevIndex, t }) {
+  const currFrame = frames[currentIndex];
+  const prevFrame = frames[prevIndex];
+  const prevLookup = {};
+  for (const a of prevFrame) { prevLookup[a.id] = a; }
+
+  const renderAtoms = currFrame.filter(a => a.type !== "blank");
+  const maxLine = Math.max(0, ...currFrame.map(a => a.line));
+  const containerH = PAD_TOP + (maxLine + 1) * LINE_H + 40;
+
+  return (
+    <div style={{
+      width: "100%",
+      maxWidth: "580px",
+      position: "relative",
+      height: `${containerH}px`,
+      transition: "height 1s cubic-bezier(0.23,1,0.32,1)",
+      zIndex: 1,
+    }}>
+      <div style={{
+        position: "absolute", left: PAD_LEFT - 16, top: 0, bottom: 0, width: "1px",
+        background: "linear-gradient(to bottom, transparent, #2a2520 10%, #2a2520 90%, transparent)",
+      }} />
+
+      {renderAtoms.map((atom) => (
+        <WordAtom
+          key={atom.id}
+          atom={atom}
+          prevAtom={prevLookup[atom.id]}
+          t={t}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── Main ───
 export default function GitPoemAtoms() {
   const [ci, setCi] = useState(0);
   const [prevCi, setPrevCi] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState("atoms");
   const { t, go } = useAnim(1100);
   const prevRef = useRef(0);
   const ivRef = useRef(null);
 
-  const nav = useCallback((n) => {
+  const handleNavigate = useCallback((n) => {
     setCi((p) => {
       const next = Math.max(0, Math.min(n, DATA.commits.length - 1));
       if (next !== p) { setPrevCi(p); return next; }
@@ -408,37 +448,9 @@ export default function GitPoemAtoms() {
     return () => clearInterval(ivRef.current);
   }, [playing]);
 
-  useEffect(() => {
-    const h = (e) => {
-      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); nav(ci + 1); }
-      else if (e.key === "ArrowLeft") { e.preventDefault(); nav(ci - 1); }
-    };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [ci, nav]);
-
-  const currFrame = DATA.frames[ci];
-  const prevFrame = DATA.frames[prevCi];
-  const prevLookup = {};
-  for (const a of prevFrame) { prevLookup[a.id] = a; }
-
-  const renderAtoms = currFrame.filter(a => a.type !== "blank");
-  const maxLine = Math.max(0, ...currFrame.map(a => a.line));
-  const containerH = PAD_TOP + (maxLine + 1) * LINE_H + 40;
-  const commit = DATA.commits[ci];
-
-  const btn = (active) => ({
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: "0.64rem",
-    letterSpacing: "0.06em",
-    textTransform: "uppercase",
-    padding: "5px 13px",
-    border: `1px solid ${active ? "#a08c6a" : "#3a3530"}`,
-    borderRadius: "3px",
-    background: active ? "rgba(160,140,106,0.12)" : "transparent",
-    color: active ? "#c4b48a" : "#6a6050",
-    cursor: "pointer",
-  });
+  const toggleMode = useCallback(() => {
+    setMode(m => m === "atoms" ? "magic-move" : "atoms");
+  }, []);
 
   return (
     <div style={{
@@ -469,80 +481,37 @@ export default function GitPoemAtoms() {
         marginBottom: "36px",
         zIndex: 1,
       }}>
-        git log --word-diff-regex=. — atoms in revision
+        {mode === "atoms"
+          ? "git log --word-diff-regex=. — atoms in revision"
+          : "git log — shiki magic move"}
       </div>
 
-      <div style={{
-        width: "100%",
-        maxWidth: "580px",
-        position: "relative",
-        height: `${containerH}px`,
-        transition: "height 1s cubic-bezier(0.23,1,0.32,1)",
-        zIndex: 1,
-      }}>
-        <div style={{
-          position: "absolute", left: PAD_LEFT - 16, top: 0, bottom: 0, width: "1px",
-          background: "linear-gradient(to bottom, transparent, #2a2520 10%, #2a2520 90%, transparent)",
-        }} />
+      {mode === "atoms" ? (
+        <AtomsRenderer
+          frames={DATA.frames}
+          currentIndex={ci}
+          prevIndex={prevCi}
+          t={t}
+        />
+      ) : (
+        <MagicMoveRenderer
+          commits={DATA.commits}
+          currentIndex={ci}
+        />
+      )}
 
-        {renderAtoms.map((atom) => (
-          <WordAtom
-            key={atom.id}
-            atom={atom}
-            prevAtom={prevLookup[atom.id]}
-            t={t}
-          />
-        ))}
-      </div>
-
-      <div style={{
-        width: "100%", maxWidth: "580px", marginTop: "16px",
-        padding: "14px 24px", borderTop: "1px solid #2a2520", zIndex: 1,
-      }}>
-        <div style={{
-          fontFamily: "'JetBrains Mono', monospace", fontSize: "0.68rem",
-          color: "#6a6050", display: "flex", gap: "12px", flexWrap: "wrap",
-        }}>
-          <span style={{ color: "#a08c6a" }}>{commit.hash}</span>
-          <span style={{ color: "#4a4030", fontSize: "0.62rem" }}>{commit.date}</span>
-          <span style={{ color: "#3a3530", fontSize: "0.6rem" }}>{ci + 1}/{DATA.commits.length}</span>
-        </div>
-        <div style={{
-          marginTop: "4px", fontFamily: "'EB Garamond', serif",
-          fontStyle: "italic", fontSize: "0.86rem", color: "#7a6a50",
-        }}>
-          "{commit.message}"
-        </div>
-      </div>
-
-      <div style={{
-        width: "100%", maxWidth: "580px", marginTop: "18px",
-        display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", zIndex: 1,
-      }}>
-        <div style={{ display: "flex", gap: "3px" }}>
-          {DATA.commits.map((_, i) => (
-            <button key={i} onClick={() => nav(i)} style={{
-              width: i === ci ? "24px" : "12px", height: "3px", borderRadius: "2px",
-              border: "none", padding: 0, cursor: "pointer",
-              background: i === ci ? "#a08c6a" : i < ci ? "#4a4030" : "#2a2520",
-              transition: "all 0.4s ease",
-            }} />
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button style={btn(false)} onClick={() => nav(ci - 1)}>← prev</button>
-          <button style={btn(playing)} onClick={() => {
-            if (ci >= DATA.commits.length - 1) nav(0);
-            setPlaying(p => !p);
-          }}>{playing ? "pause" : "play"}</button>
-          <button style={btn(false)} onClick={() => nav(ci + 1)}>next →</button>
-        </div>
-        <div style={{
-          fontFamily: "'JetBrains Mono', monospace", fontSize: "0.54rem", color: "#3a3530",
-        }}>
-          ← → or spacebar • watch the bones
-        </div>
-      </div>
+      <CommitNav
+        commits={DATA.commits}
+        currentIndex={ci}
+        onNavigate={handleNavigate}
+        playing={playing}
+        onTogglePlay={() => {
+          if (ci >= DATA.commits.length - 1) handleNavigate(0);
+          setPlaying(p => !p);
+        }}
+        mode={mode}
+        onToggleMode={toggleMode}
+      />
     </div>
   );
 }
