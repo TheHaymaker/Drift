@@ -43,6 +43,79 @@ function unmountPlayback() {
   }
 }
 
+// ─── Auth ───
+const authView = document.getElementById("authView");
+const authForm = document.getElementById("authForm");
+const authUsername = document.getElementById("authUsername");
+const authPassword = document.getElementById("authPassword");
+const authSubmit = document.getElementById("authSubmit");
+const authToggle = document.getElementById("authToggle");
+const authError = document.getElementById("authError");
+const logoutBtn = document.getElementById("logoutBtn");
+const dashboardSubtitle = document.getElementById("dashboardSubtitle");
+
+let currentUser = null;
+let authMode = "login"; // "login" or "register"
+
+async function checkAuth() {
+  try {
+    const res = await fetch("/api/auth/me");
+    if (res.ok) {
+      currentUser = await res.json();
+      return true;
+    }
+  } catch {}
+  currentUser = null;
+  return false;
+}
+
+function showAuth() {
+  authView.classList.remove("hidden");
+  dashboardView.classList.add("hidden");
+  editorView.classList.add("hidden");
+  connStatus.classList.add("hidden");
+  authError.textContent = "";
+  authUsername.focus();
+}
+
+authToggle.addEventListener("click", () => {
+  authMode = authMode === "login" ? "register" : "login";
+  authSubmit.textContent = authMode === "login" ? "log in" : "register";
+  authToggle.textContent = authMode === "login"
+    ? "need an account? register"
+    : "have an account? log in";
+  authError.textContent = "";
+});
+
+authForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  authError.textContent = "";
+  const username = authUsername.value.trim().toLowerCase();
+  const password = authPassword.value;
+  if (!username || !password) { authError.textContent = "fill in both fields"; return; }
+  try {
+    const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { authError.textContent = data.error; return; }
+    currentUser = data;
+    authPassword.value = "";
+    route();
+  } catch {
+    authError.textContent = "connection failed";
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  currentUser = null;
+  showAuth();
+});
+
 // ─── DOM refs ───
 const landingView = document.getElementById("landingView");
 const dashboardView = document.getElementById("dashboardView");
@@ -94,7 +167,12 @@ function navigate(hash) {
   location.hash = hash;
 }
 
-function route() {
+async function route() {
+  if (!currentUser) {
+    const authed = await checkAuth();
+    if (!authed) { showAuth(); return; }
+  }
+  authView.classList.add("hidden");
   const r = getRoute();
   stopTypingAnimation();
   if (r.view === "read") {
@@ -197,6 +275,9 @@ function showDashboard() {
   editorView.classList.add("hidden");
   connStatus.classList.add("hidden");
   document.title = "drift";
+  if (currentUser) {
+    dashboardSubtitle.textContent = currentUser.username + "'s poems";
+  }
   loadDocList();
 }
 

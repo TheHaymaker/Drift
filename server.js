@@ -22,6 +22,8 @@ const { nanoid } = require("nanoid");
 const GitOps = require("./lib/GitOps");
 const Session = require("./lib/Session");
 const DocumentStore = require("./lib/DocumentStore");
+const UserStore = require("./lib/UserStore");
+const sessionMiddleware = require("./lib/sessionMiddleware");
 
 const PORT = parseInt(process.env.PORT || process.argv[2] || "3377", 10);
 const EVICTION_DELAY = 60_000; // 60s grace period before evicting idle sessions
@@ -70,6 +72,7 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
+app.use(sessionMiddleware);
 
 // Serve Vite build output if available, otherwise fall back to public/
 const fs = require("fs");
@@ -77,14 +80,66 @@ const distDir = path.join(__dirname, "dist");
 const staticDir = fs.existsSync(distDir) ? distDir : path.join(__dirname, "public");
 app.use(express.static(staticDir));
 
+// ─── Auth routes ───
+
+app.post("/api/auth/register", (req, res) => {
+  const { username, password } = req.body;
+  if (!username || typeof username !== "string" || !/^[a-z0-9][a-z0-9-]{0,28}[a-z0-9]?$/.test(username)) {
+    return res.status(400).json({ error: "username must be 2-30 lowercase alphanumeric/hyphen characters" });
+  }
+  if (!password || typeof password !== "string" || password.length < 8) {
+    return res.status(400).json({ error: "password must be at least 8 characters" });
+  }
+  try {
+    const user = UserStore.createUser(username, password);
+    req.session.userId = user.user_id;
+    res.status(201).json(user);
+  } catch (e) {
+    if (e.message.includes("UNIQUE")) {
+      return res.status(409).json({ error: "username already taken" });
+    }
+    console.error("  register failed:", e.message);
+    res.status(500).json({ error: "registration failed" });
+  }
+});
+
+app.post("/api/auth/login", (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: "username and password required" });
+  }
+  const user = UserStore.authenticateUser(username, password);
+  if (!user) return res.status(401).json({ error: "invalid credentials" });
+  req.session.userId = user.user_id;
+  res.json(user);
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  req.session.destroy(() => res.status(204).end());
+});
+
+app.get("/api/auth/me", (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: "not authenticated" });
+  const user = UserStore.getUser(req.session.userId);
+  if (!user) return res.status(401).json({ error: "not authenticated" });
+  res.json({ user_id: user.user_id, username: user.username });
+});
+
+// ─── Auth middleware for document routes ───
+
+function requireAuth(req, res, next) {
+  if (!req.session.userId) return res.status(401).json({ error: "not authenticated" });
+  next();
+}
+
 // Document CRUD
 
-app.post("/api/documents", async (req, res) => {
+app.post("/api/documents", requireAuth, async (req, res) => {
   try {
     const docId = nanoid(12);
     const filename = req.body.filename || "poem.txt";
     const title = req.body.title || "untitled";
-    const doc = DocumentStore.createDocument(docId, filename, title);
+    const doc = DocumentStore.createDocument(docId, filename, title, req.session.userId);
     await GitOps.ensureRepo(doc.repoPath, filename);
     console.log(`  created document: ${docId}`);
     res.status(201).json({ docId, filename, title });
@@ -94,20 +149,20 @@ app.post("/api/documents", async (req, res) => {
   }
 });
 
-app.get("/api/documents", (req, res) => {
-  res.json(DocumentStore.listDocuments());
+app.get("/api/documents", requireAuth, (req, res) => {
+  res.json(DocumentStore.listDocuments(req.session.userId));
 });
 
-app.get("/api/documents/:docId", (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId", requireAuth, (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   res.json(doc);
 });
 
 // Rename title and/or filename
-app.patch("/api/documents/:docId", async (req, res) => {
+app.patch("/api/documents/:docId", requireAuth, async (req, res) => {
   try {
-    const doc = DocumentStore.getDocument(req.params.docId);
+    const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
     if (!doc) return res.status(404).json({ error: "not found" });
 
     const { title, filename } = req.body;
@@ -142,9 +197,9 @@ app.patch("/api/documents/:docId", async (req, res) => {
 });
 
 // Delete document
-app.delete("/api/documents/:docId", async (req, res) => {
+app.delete("/api/documents/:docId", requireAuth, async (req, res) => {
   try {
-    const doc = DocumentStore.getDocument(req.params.docId);
+    const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
     if (!doc) return res.status(404).json({ error: "not found" });
 
     // Evict active session
@@ -180,43 +235,43 @@ function isValidFilename(name) {
 
 // Document-scoped API
 
-app.get("/api/documents/:docId/file", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/file", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   const content = await GitOps.readFile(doc.repoPath, doc.filename);
   res.json({ content, filename: doc.filename });
 });
 
-app.get("/api/documents/:docId/log", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/log", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   const log = await GitOps.getLog(doc.repoPath, doc.filename);
   res.json(log);
 });
 
-app.get("/api/documents/:docId/snapshot/:hash", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/snapshot/:hash", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   const content = await GitOps.getFileAt(doc.repoPath, req.params.hash, doc.filename);
   res.json({ content });
 });
 
-app.get("/api/documents/:docId/diff/:a/:b", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/diff/:a/:b", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   const diff = await GitOps.getWordDiff(doc.repoPath, req.params.a, req.params.b, doc.filename);
   res.json({ diff });
 });
 
-app.get("/api/documents/:docId/structured-diff/:a/:b", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/structured-diff/:a/:b", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   const segments = await GitOps.getStructuredDiff(doc.repoPath, req.params.a, req.params.b, doc.filename);
   res.json({ segments });
 });
 
-app.get("/api/documents/:docId/playback", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/playback", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   try {
     const log = await GitOps.getLog(doc.repoPath, doc.filename);
@@ -243,8 +298,8 @@ app.get("/api/documents/:docId/playback", async (req, res) => {
 // ─── Sync endpoints (browser-to-server git sync) ───
 
 // Clone: full history as ordered commit array
-app.get("/api/documents/:docId/sync/clone", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/sync/clone", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   try {
     const log = await GitOps.getLog(doc.repoPath, doc.filename);
@@ -266,8 +321,8 @@ app.get("/api/documents/:docId/sync/clone", async (req, res) => {
 });
 
 // Pull: incremental commits after a given hash
-app.get("/api/documents/:docId/sync/pull", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.get("/api/documents/:docId/sync/pull", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   try {
     const since = req.query.since;
@@ -298,8 +353,8 @@ app.get("/api/documents/:docId/sync/pull", async (req, res) => {
 });
 
 // Push: browser sends commits to server (idempotent)
-app.post("/api/documents/:docId/sync/push", async (req, res) => {
-  const doc = DocumentStore.getDocument(req.params.docId);
+app.post("/api/documents/:docId/sync/push", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
   if (!doc) return res.status(404).json({ error: "not found" });
   try {
     const { commits } = req.body;
@@ -334,8 +389,22 @@ app.get("*", (req, res) => {
 
 const wss = new WebSocketServer({ server });
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
   let session = null;
+  let userId = null;
+
+  // Parse session from upgrade request cookie
+  sessionMiddleware(req, {}, () => {
+    if (req.session && req.session.userId) {
+      userId = req.session.userId;
+    }
+  });
+
+  if (!userId) {
+    ws.send(JSON.stringify({ type: "error", message: "not authenticated" }));
+    ws.close();
+    return;
+  }
 
   ws.on("message", async (raw) => {
     let msg;
@@ -347,6 +416,13 @@ wss.on("connection", (ws) => {
       const docId = msg.docId;
       if (!docId || typeof docId !== "string" || !/^[a-zA-Z0-9_-]+$/.test(docId)) {
         ws.send(JSON.stringify({ type: "error", message: "invalid docId" }));
+        return;
+      }
+
+      // Verify ownership
+      const doc = DocumentStore.getDocumentForOwner(docId, userId);
+      if (!doc) {
+        ws.send(JSON.stringify({ type: "error", message: "document not found" }));
         return;
       }
 
@@ -415,6 +491,18 @@ wss.on("connection", (ws) => {
 
 (async () => {
   await migrateLegacyRepo();
+
+  // Claim orphaned documents (owner_id IS NULL) for a specific user
+  const legacyOwner = process.env.DRIFT_LEGACY_OWNER;
+  if (legacyOwner) {
+    const user = UserStore.getUserByUsername(legacyOwner);
+    if (user) {
+      const result = DocumentStore.claimOrphanedDocuments(user.user_id);
+      if (result.changes > 0) {
+        console.log(`  claimed ${result.changes} orphaned document(s) for user "${legacyOwner}"`);
+      }
+    }
+  }
 
   server.listen(PORT, "0.0.0.0", () => {
     const docs = DocumentStore.listDocuments();

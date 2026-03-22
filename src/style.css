@@ -23,6 +23,66 @@ body {
   overflow-x: hidden;
 }
 
+/* ─── Auth ─── */
+
+.auth-view {
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 120px 32px;
+  text-align: center;
+}
+
+.auth-container { display: flex; flex-direction: column; gap: 16px; }
+
+.auth-container .dashboard-title { margin-bottom: 0; }
+.auth-container .dashboard-subtitle { margin-bottom: 16px; }
+
+#authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#authForm input {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-raised);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+#authForm input:focus { border-color: var(--accent); }
+
+.auth-toggle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+}
+.auth-toggle:hover { color: var(--text); }
+
+.auth-error {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--red);
+  min-height: 1.2em;
+}
+
+.logout-btn {
+  position: absolute;
+  right: 0;
+  top: 4px;
+}
+
+.dashboard-header { position: relative; }
+
 /* ─── Dashboard ─── */
 
 .dashboard {
