@@ -200,6 +200,32 @@ body {
 .doc-item-title {
   font-size: 1rem;
   color: var(--text);
+  cursor: text;
+}
+
+.doc-item-title:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--text-faint);
+  text-underline-offset: 3px;
+  text-decoration-style: dotted;
+}
+
+.doc-title-input {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+  max-width: 300px;
+}
+
+.doc-title-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(160, 140, 106, 0.3);
 }
 
 .doc-item-meta {

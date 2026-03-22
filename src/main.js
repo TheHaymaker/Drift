@@ -308,24 +308,15 @@ async function loadDocList() {
           <button class="doc-action-btn doc-play-btn" title="play back">&#9654;</button>
         </div>
       `;
-      div.querySelector(".doc-item-info").addEventListener("click", () => navigate("#/write/" + doc.doc_id));
-      div.querySelector(".doc-rename-btn").addEventListener("click", async (e) => {
+      const titleSpan = div.querySelector(".doc-item-title");
+      titleSpan.addEventListener("click", (e) => {
         e.stopPropagation();
-        const newTitle = prompt("rename poem:", doc.title || "untitled");
-        if (newTitle === null || newTitle.trim() === "") return;
-        const trimmed = newTitle.trim();
-        const newFilename = titleToFilename(trimmed);
-        try {
-          await fetch("/api/documents/" + doc.doc_id, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: trimmed, filename: newFilename }),
-          });
-          loadDocList();
-          showToast("renamed to " + trimmed);
-        } catch (e) {
-          showToast("rename failed");
-        }
+        startInlineRename(titleSpan, doc);
+      });
+      div.querySelector(".doc-item-info").addEventListener("click", () => navigate("#/write/" + doc.doc_id));
+      div.querySelector(".doc-rename-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        startInlineRename(titleSpan, doc);
       });
       div.querySelector(".doc-delete-btn").addEventListener("click", async (e) => {
         e.stopPropagation();
@@ -353,11 +344,75 @@ function titleToFilename(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".txt";
 }
 
+const POEM_ADJECTIVES = [
+  "silver", "quiet", "amber", "hollow", "velvet",
+  "ancient", "drifting", "woven", "fading", "luminous",
+  "gentle", "wild", "distant", "trembling", "golden",
+  "frozen", "restless", "solitary", "tangled", "dusky"
+];
+
+const POEM_NOUNS = [
+  "dawn", "harbor", "thread", "ember", "shore",
+  "echo", "meadow", "lantern", "river", "ghost",
+  "hymn", "shadow", "garden", "stillness", "tide",
+  "passage", "vessel", "bloom", "reverie", "stone"
+];
+
+function generatePoemName() {
+  const adj = POEM_ADJECTIVES[Math.floor(Math.random() * POEM_ADJECTIVES.length)];
+  const noun = POEM_NOUNS[Math.floor(Math.random() * POEM_NOUNS.length)];
+  return adj + " " + noun;
+}
+
+function startInlineRename(titleSpan, doc) {
+  if (titleSpan.querySelector("input")) return;
+  const currentTitle = doc.title || "untitled";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "doc-title-input";
+  input.value = currentTitle;
+  titleSpan.textContent = "";
+  titleSpan.appendChild(input);
+  input.focus();
+  input.select();
+  let saved = false;
+  async function save() {
+    if (saved) return;
+    saved = true;
+    const trimmed = input.value.trim();
+    if (!trimmed || trimmed === currentTitle) {
+      titleSpan.textContent = currentTitle;
+      return;
+    }
+    const newFilename = titleToFilename(trimmed);
+    try {
+      await fetch("/api/documents/" + doc.doc_id, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed, filename: newFilename }),
+      });
+      loadDocList();
+      showToast("renamed to " + trimmed);
+    } catch (e) {
+      showToast("rename failed");
+      titleSpan.textContent = currentTitle;
+    }
+  }
+  function cancel() {
+    if (saved) return;
+    saved = true;
+    titleSpan.textContent = currentTitle;
+  }
+  input.addEventListener("blur", save);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+  });
+}
+
 newPoemBtn.addEventListener("click", async () => {
-  const title = prompt("poem title:");
-  if (title === null) return;
-  const finalTitle = title.trim() || "untitled";
-  const filename = finalTitle === "untitled" ? "poem.txt" : titleToFilename(finalTitle);
+  const finalTitle = generatePoemName();
+  const filename = titleToFilename(finalTitle);
   try {
     const res = await fetch("/api/documents", {
       method: "POST",
