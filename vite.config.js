@@ -12,6 +12,11 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:3377",
       },
+      // Proxy WebSocket connections for presence/typing
+      "/ws": {
+        target: "ws://localhost:3377",
+        ws: true,
+      },
     },
   },
 });

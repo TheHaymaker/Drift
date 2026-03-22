@@ -2,12 +2,23 @@ import "./style.css";
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import Playback from "./Playback.jsx";
+import { createGitClient } from "./git-client.js";
+import { createSyncClient } from "./sync.js";
+
+// ─── Browser git capability detection ───
+const canUseLocalGit =
+  typeof Worker !== "undefined" && typeof indexedDB !== "undefined";
+
+let gitClient = null;
+let syncClient = null;
+let currentFilename = null;
 
 // ─── Playback mount ───
 let playbackRoot = null;
 const playbackContainer = document.getElementById("playbackView");
 
 function mountPlayback(docId) {
+  document.getElementById("landingView").classList.add("hidden");
   document.getElementById("dashboardView").classList.add("hidden");
   document.getElementById("editorView").classList.add("hidden");
   document.getElementById("connStatus").classList.add("hidden");
@@ -20,7 +31,7 @@ function mountPlayback(docId) {
   playbackRoot.render(
     createElement(Playback, {
       docId,
-      onBack: () => { location.hash = "#/"; },
+      onBack: () => { location.hash = "#/poems"; },
     })
   );
 }
@@ -106,6 +117,7 @@ logoutBtn.addEventListener("click", async () => {
 });
 
 // ─── DOM refs ───
+const landingView = document.getElementById("landingView");
 const dashboardView = document.getElementById("dashboardView");
 const editorView = document.getElementById("editorView");
 const connStatus = document.getElementById("connStatus");
@@ -147,7 +159,8 @@ function getRoute() {
   if (writeMatch) return { view: "write", docId: writeMatch[1] };
   const readMatch = hash.match(/^#\/read\/(.+)$/);
   if (readMatch) return { view: "read", docId: readMatch[1] };
-  return { view: "dashboard" };
+  if (hash === "#/poems") return { view: "dashboard" };
+  return { view: "landing" };
 }
 
 function navigate(hash) {
@@ -161,6 +174,7 @@ async function route() {
   }
   authView.classList.add("hidden");
   const r = getRoute();
+  stopTypingAnimation();
   if (r.view === "read") {
     disconnectWs();
     currentDocId = null;
@@ -170,19 +184,93 @@ async function route() {
     unmountPlayback();
     if (r.view === "write") {
       showEditor(r.docId);
-    } else {
+    } else if (r.view === "dashboard") {
       showDashboard();
+    } else {
+      showLanding();
     }
   }
 }
 
 window.addEventListener("hashchange", route);
 
+// ─── Landing ───
+
+let typingTimer = null;
+
+const typingPoem = [
+  "The water remembers the sky,",
+  "The shadows hold the heat of the day,",
+  "And we are but ghosts in the garden.",
+];
+
+function stopTypingAnimation() {
+  if (typingTimer) {
+    clearTimeout(typingTimer);
+    typingTimer = null;
+  }
+}
+
+function startTypingAnimation() {
+  const container = document.getElementById("typingLines");
+  if (!container) return;
+  container.innerHTML = "";
+
+  let lineIdx = 0;
+  let charIdx = 0;
+  let currentLineEl = null;
+
+  function tick() {
+    if (lineIdx >= typingPoem.length) {
+      // Add blinking cursor to last line
+      if (currentLineEl) {
+        const cursor = document.createElement("span");
+        cursor.className = "typing-cursor";
+        cursor.textContent = "|";
+        currentLineEl.appendChild(cursor);
+      }
+      return;
+    }
+
+    if (charIdx === 0) {
+      currentLineEl = document.createElement("p");
+      currentLineEl.className = "typing-line";
+      container.appendChild(currentLineEl);
+    }
+
+    const line = typingPoem[lineIdx];
+    currentLineEl.textContent = line.slice(0, charIdx + 1);
+    charIdx++;
+
+    if (charIdx >= line.length) {
+      lineIdx++;
+      charIdx = 0;
+      typingTimer = setTimeout(tick, 400);
+    } else {
+      typingTimer = setTimeout(tick, 50 + Math.random() * 40);
+    }
+  }
+
+  typingTimer = setTimeout(tick, 800);
+}
+
+function showLanding() {
+  disconnectWs();
+  currentDocId = null;
+  landingView.classList.remove("hidden");
+  dashboardView.classList.add("hidden");
+  editorView.classList.add("hidden");
+  connStatus.classList.add("hidden");
+  document.title = "drift \u2014 where every pause is a verse";
+  startTypingAnimation();
+}
+
 // ─── Dashboard ───
 
 function showDashboard() {
   disconnectWs();
   currentDocId = null;
+  landingView.classList.add("hidden");
   dashboardView.classList.remove("hidden");
   editorView.classList.add("hidden");
   connStatus.classList.add("hidden");
@@ -283,13 +371,14 @@ newPoemBtn.addEventListener("click", async () => {
   }
 });
 
-backBtn.addEventListener("click", () => navigate("#/"));
+backBtn.addEventListener("click", () => navigate("#/poems"));
 
 // ─── Editor ───
 
 function showEditor(docId, readOnly) {
   if (currentDocId === docId && ws && ws.readyState === 1) return;
   currentDocId = docId;
+  landingView.classList.add("hidden");
   dashboardView.classList.add("hidden");
   editorView.classList.remove("hidden");
   connStatus.classList.remove("hidden");
@@ -302,6 +391,7 @@ function showEditor(docId, readOnly) {
 }
 
 function disconnectWs() {
+  destroyLocalGit();
   if (ws) {
     ws.onclose = null;
     ws.close();
@@ -327,6 +417,7 @@ function connectWs(docId) {
 
     if (msg.type === "init") {
       editor.value = msg.content;
+      currentFilename = msg.filename;
       filenameEl.textContent = msg.filename;
       pauseThreshold = msg.pauseThreshold;
       thresholdSlider.value = pauseThreshold;
@@ -335,6 +426,11 @@ function connectWs(docId) {
       status.textContent = "ready";
       status.className = "status-pill";
       if (!editor.readOnly) editor.focus();
+
+      // Initialize browser-side git
+      if (canUseLocalGit) {
+        initLocalGit(docId, msg.filename, msg.content, msg.log);
+      }
     }
 
     if (msg.type === "committed") {
@@ -361,7 +457,7 @@ function connectWs(docId) {
 
     if (msg.type === "deleted") {
       showToast("this poem has been deleted");
-      navigate("#/");
+      navigate("#/poems");
     }
 
     if (msg.type === "error") {
@@ -370,10 +466,17 @@ function connectWs(docId) {
   };
 
   ws.onclose = () => {
-    connDot.className = "connection-dot disconnected";
-    connLabel.textContent = "disconnected";
-    status.textContent = "offline";
-    status.className = "status-pill";
+    if (gitClient) {
+      connDot.className = "connection-dot offline-local";
+      connLabel.textContent = "offline (local)";
+      status.textContent = "ready";
+      status.className = "status-pill";
+    } else {
+      connDot.className = "connection-dot disconnected";
+      connLabel.textContent = "disconnected";
+      status.textContent = "offline";
+      status.className = "status-pill";
+    }
     if (getRoute().docId === docId) {
       setTimeout(() => connectWs(docId), 3000);
     }
@@ -428,25 +531,55 @@ function renderCommits(log, newHash) {
       '<div class="commit-hash">' + c.hash + '</div>' +
       '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
       '<div class="commit-time">#' + (c.index + 1) + '</div>';
-    div.addEventListener("click", () => {
+    div.addEventListener("click", async () => {
       document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
       div.classList.add("active");
 
-      // Fetch snapshot
-      fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash)
-        .then(r => r.json())
-        .then(d => {
+      // Fetch snapshot — prefer local git
+      if (gitClient && currentDocId && currentFilename) {
+        try {
+          const snap = await gitClient.getFileAt({ docId: currentDocId, filename: currentFilename, hash: c.hash });
+          editor.value = snap.content;
+          showToast("viewing " + c.hash);
+        } catch {
+          // Fall back to server
+          const d = await fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash).then(r => r.json());
           editor.value = d.content;
           showToast("viewing " + c.hash);
-        });
+        }
+      } else {
+        fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash)
+          .then(r => r.json())
+          .then(d => {
+            editor.value = d.content;
+            showToast("viewing " + c.hash);
+          });
+      }
 
-      // Fetch and show diff if there's a previous commit
+      // Fetch and show diff — prefer local git
       if (c.index > 0) {
         const prev = log[c.index - 1];
-        fetchAndShowDiff(prev.hash, c.hash, c);
+        if (gitClient && currentDocId && currentFilename) {
+          try {
+            const diffResult = await gitClient.getStructuredDiff({ docId: currentDocId, filename: currentFilename, hashA: prev.hash, hashB: c.hash });
+            renderDiff(diffResult.segments, c);
+          } catch {
+            fetchAndShowDiff(prev.hash, c.hash, c);
+          }
+        } else {
+          fetchAndShowDiff(prev.hash, c.hash, c);
+        }
       } else {
-        // First commit — show it as all-added
-        showFirstCommitDiff(c.hash, c);
+        if (gitClient && currentDocId && currentFilename) {
+          try {
+            const snap = await gitClient.getFileAt({ docId: currentDocId, filename: currentFilename, hash: c.hash });
+            renderDiff(snap.content ? [{ type: "added", text: snap.content }] : [], c);
+          } catch {
+            showFirstCommitDiff(c.hash, c);
+          }
+        } else {
+          showFirstCommitDiff(c.hash, c);
+        }
       }
     });
     commitList.appendChild(div);
@@ -502,6 +635,71 @@ function closeDiff() {
 
 diffClose.addEventListener("click", closeDiff);
 
+// ─── Browser-side git initialization ───
+
+async function initLocalGit(docId, filename, serverContent, serverLog) {
+  destroyLocalGit();
+  gitClient = createGitClient();
+
+  try {
+    const initResult = await gitClient.init({ docId, filename });
+
+    // If repo was just created and server has history, clone it
+    if (!initResult.existing && serverLog && serverLog.length > 0) {
+      // Fetch full commit data from server for clone
+      const res = await fetch(`/api/documents/${docId}/sync/clone`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.commits && data.commits.length > 0) {
+          await gitClient.clone({ docId, filename, commits: data.commits });
+        }
+      }
+    } else if (initResult.existing) {
+      // Existing local repo — write current content to match server
+      await gitClient.writeFile({ docId, filename, content: serverContent });
+    }
+
+    // Set threshold to match
+    await gitClient.setThreshold({ docId, value: pauseThreshold });
+
+    // Initialize sync client
+    syncClient = createSyncClient(docId, filename, gitClient);
+
+    // Listen for local commits (from pause timer in worker)
+    gitClient.onCommit(async (data) => {
+      // Update UI from local git
+      const logResult = await gitClient.getLog({ docId });
+      renderCommits(logResult.log, data.hash);
+      showToast(data.hash + " \u2014 " + data.message);
+      status.textContent = "committed " + data.hash;
+      status.className = "status-pill committed";
+      setTimeout(() => {
+        status.textContent = "ready";
+        status.className = "status-pill";
+      }, 2000);
+
+      // Queue sync push
+      if (syncClient) syncClient.pushCommit(data);
+    });
+
+    console.log("[drift] browser git ready for", docId);
+  } catch (err) {
+    console.error("[drift] browser git init failed:", err);
+    gitClient = null;
+  }
+}
+
+function destroyLocalGit() {
+  if (syncClient) {
+    syncClient.destroy();
+    syncClient = null;
+  }
+  if (gitClient) {
+    gitClient.destroy();
+    gitClient = null;
+  }
+}
+
 // ─── Editor events ───
 
 editor.addEventListener("input", () => {
@@ -511,8 +709,22 @@ editor.addEventListener("input", () => {
   status.textContent = "writing";
   status.className = "status-pill typing";
 
-  if (ws && ws.readyState === 1) {
-    ws.send(JSON.stringify({ type: "update", content: editor.value }));
+  if (gitClient && currentDocId && currentFilename) {
+    // Write to local git (pause timer in worker handles commits)
+    gitClient.writeFile({
+      docId: currentDocId,
+      filename: currentFilename,
+      content: editor.value,
+    });
+    // Send lightweight typing indicator over WebSocket
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "typing", length: editor.value.length }));
+    }
+  } else {
+    // Fallback: send full content over WebSocket (original path)
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "update", content: editor.value }));
+    }
   }
 });
 
@@ -530,13 +742,27 @@ thresholdSlider.addEventListener("input", () => {
   const val = parseInt(thresholdSlider.value);
   thresholdValue.textContent = (val / 1000).toFixed(1) + "s";
   pauseThreshold = val;
+  if (gitClient && currentDocId) {
+    gitClient.setThreshold({ docId: currentDocId, value: val });
+  }
   if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: "set-threshold", value: val }));
   }
 });
 
-forceCommitBtn.addEventListener("click", () => {
-  if (ws && ws.readyState === 1) {
+forceCommitBtn.addEventListener("click", async () => {
+  if (gitClient && currentDocId && currentFilename) {
+    const result = await gitClient.forceCommit({
+      docId: currentDocId,
+      filename: currentFilename,
+    });
+    if (result && !result.noChange) {
+      const logResult = await gitClient.getLog({ docId: currentDocId });
+      renderCommits(logResult.log, result.hash);
+      showToast(result.hash + " \u2014 " + result.message);
+      if (syncClient) syncClient.pushCommit(result);
+    }
+  } else if (ws && ws.readyState === 1) {
     ws.send(JSON.stringify({ type: "force-commit" }));
   }
 });
@@ -548,11 +774,23 @@ document.getElementById("playbackBtn").addEventListener("click", () => {
 exportBtn.addEventListener("click", async () => {
   if (!currentDocId) return;
   try {
-    const log = await fetch("/api/documents/" + currentDocId + "/log").then(r => r.json());
-    const snapshots = [];
-    for (const c of log) {
-      const snap = await fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash).then(r => r.json());
-      snapshots.push({ ...c, content: snap.content });
+    let snapshots;
+    if (gitClient && currentFilename) {
+      // Export from local git
+      const logResult = await gitClient.getLog({ docId: currentDocId });
+      snapshots = [];
+      for (const c of logResult.log) {
+        const snap = await gitClient.getFileAt({ docId: currentDocId, filename: currentFilename, hash: c.hash });
+        snapshots.push({ ...c, content: snap.content });
+      }
+    } else {
+      // Export from server
+      const log = await fetch("/api/documents/" + currentDocId + "/log").then(r => r.json());
+      snapshots = [];
+      for (const c of log) {
+        const snap = await fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash).then(r => r.json());
+        snapshots.push({ ...c, content: snap.content });
+      }
     }
     const blob = new Blob([JSON.stringify(snapshots, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -561,7 +799,7 @@ exportBtn.addEventListener("click", async () => {
     a.download = "drift-export-" + Date.now() + ".json";
     a.click();
     URL.revokeObjectURL(url);
-    showToast("exported " + log.length + " snapshots");
+    showToast("exported " + snapshots.length + " snapshots");
   } catch (e) {
     showToast("export failed");
   }
@@ -572,11 +810,20 @@ editor.addEventListener("blur", () => {
   status.className = "status-pill paused";
 });
 
-editor.addEventListener("focus", () => {
+editor.addEventListener("focus", async () => {
   if (!currentDocId) return;
   document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
   closeDiff();
-  if (ws && ws.readyState === 1) {
+  if (gitClient && currentDocId && currentFilename) {
+    try {
+      const result = await gitClient.readFile({ docId: currentDocId, filename: currentFilename });
+      editor.value = result.content;
+    } catch {
+      // Fall back to server
+      const d = await fetch("/api/documents/" + currentDocId + "/file").then(r => r.json());
+      editor.value = d.content;
+    }
+  } else if (ws && ws.readyState === 1) {
     fetch("/api/documents/" + currentDocId + "/file").then(r => r.json()).then(d => {
       editor.value = d.content;
     });
