@@ -240,6 +240,91 @@ app.get("/api/documents/:docId/playback", async (req, res) => {
   }
 });
 
+// ─── Sync endpoints (browser-to-server git sync) ───
+
+// Clone: full history as ordered commit array
+app.get("/api/documents/:docId/sync/clone", async (req, res) => {
+  const doc = DocumentStore.getDocument(req.params.docId);
+  if (!doc) return res.status(404).json({ error: "not found" });
+  try {
+    const log = await GitOps.getLog(doc.repoPath, doc.filename);
+    const commits = [];
+    for (const c of log) {
+      const content = await GitOps.getFileAt(doc.repoPath, c.hash, doc.filename);
+      commits.push({
+        hash: c.hash,
+        message: c.message,
+        date: c.date || "",
+        content,
+      });
+    }
+    res.json({ commits });
+  } catch (e) {
+    console.error("  sync/clone failed:", e.message);
+    res.status(500).json({ error: "clone failed" });
+  }
+});
+
+// Pull: incremental commits after a given hash
+app.get("/api/documents/:docId/sync/pull", async (req, res) => {
+  const doc = DocumentStore.getDocument(req.params.docId);
+  if (!doc) return res.status(404).json({ error: "not found" });
+  try {
+    const since = req.query.since;
+    const log = await GitOps.getLog(doc.repoPath, doc.filename);
+
+    let startIdx = 0;
+    if (since) {
+      const idx = log.findIndex((c) => c.hash.startsWith(since));
+      if (idx >= 0) startIdx = idx + 1;
+    }
+
+    const newEntries = log.slice(startIdx);
+    const commits = [];
+    for (const c of newEntries) {
+      const content = await GitOps.getFileAt(doc.repoPath, c.hash, doc.filename);
+      commits.push({
+        hash: c.hash,
+        message: c.message,
+        date: c.date || "",
+        content,
+      });
+    }
+    res.json({ commits });
+  } catch (e) {
+    console.error("  sync/pull failed:", e.message);
+    res.status(500).json({ error: "pull failed" });
+  }
+});
+
+// Push: browser sends commits to server (idempotent)
+app.post("/api/documents/:docId/sync/push", async (req, res) => {
+  const doc = DocumentStore.getDocument(req.params.docId);
+  if (!doc) return res.status(404).json({ error: "not found" });
+  try {
+    const { commits } = req.body;
+    if (!Array.isArray(commits)) {
+      return res.status(400).json({ error: "commits must be an array" });
+    }
+
+    await GitOps.ensureRepo(doc.repoPath, doc.filename);
+    const accepted = [];
+    for (const c of commits) {
+      await GitOps.writeFile(doc.repoPath, doc.filename, c.content);
+      const result = await GitOps.commitFile(doc.repoPath, doc.filename, c.message);
+      if (result) accepted.push(c.hash);
+    }
+
+    DocumentStore.touchLastModified(doc.doc_id);
+    const log = await GitOps.getLog(doc.repoPath, doc.filename);
+    const lastHash = log.length > 0 ? log[log.length - 1].hash : null;
+    res.json({ accepted, lastHash });
+  } catch (e) {
+    console.error("  sync/push failed:", e.message);
+    res.status(500).json({ error: "push failed" });
+  }
+});
+
 // Catch-all: serve index.html for client-side routing
 app.get("*", (req, res) => {
   res.sendFile(path.join(staticDir, "index.html"));
@@ -308,6 +393,11 @@ wss.on("connection", (ws) => {
 
     if (msg.type === "set-threshold") {
       session.setThreshold(msg.value);
+    }
+
+    // Lightweight typing indicator — broadcast to other clients without disk I/O
+    if (msg.type === "typing") {
+      session.broadcast({ type: "typing", length: msg.length }, ws);
     }
   });
 

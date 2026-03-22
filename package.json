@@ -11,8 +11,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@isomorphic-git/lightning-fs": "^4.6.2",
     "better-sqlite3": "^11.0.0",
     "express": "^4.21.0",
+    "isomorphic-git": "^1.37.4",
     "nanoid": "^3.3.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
