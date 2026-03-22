@@ -97,7 +97,13 @@ body {
   min-width: 0;
 }
 
-.doc-play-btn {
+.doc-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.doc-action-btn {
   font-size: 0.7rem;
   width: 28px;
   height: 28px;
@@ -114,10 +120,16 @@ body {
   padding: 0;
 }
 
-.doc-play-btn:hover {
+.doc-action-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
   background: rgba(160, 140, 106, 0.08);
+}
+
+.doc-delete-btn:hover {
+  border-color: #f87171;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
 }
 
 .doc-item:hover {
