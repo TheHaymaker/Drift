@@ -1,19 +1,12 @@
-# fly.toml app configuration file generated for app-cool-sun-1542 on 2026-03-22T04:38:44Z
+# fly.toml app configuration file generated for drift-6dgu9w on 2026-03-22T04:50:49Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'app-cool-sun-1542'
+app = 'drift-6dgu9w'
 primary_region = 'iad'
 
 [build]
-
-[env]
-  DRIFT_DATA_DIR = "/data"
-
-[mounts]
-  source = "drift_data"
-  destination = "/data"
 
 [http_service]
   internal_port = 8080
@@ -24,6 +17,7 @@ primary_region = 'iad'
   processes = ['app']
 
 [[vm]]
+  memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 256
+  memory_mb = 1024
