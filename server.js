@@ -104,6 +104,80 @@ app.get("/api/documents/:docId", (req, res) => {
   res.json(doc);
 });
 
+// Rename title and/or filename
+app.patch("/api/documents/:docId", async (req, res) => {
+  try {
+    const doc = DocumentStore.getDocument(req.params.docId);
+    if (!doc) return res.status(404).json({ error: "not found" });
+
+    const { title, filename } = req.body;
+
+    if (title && typeof title === "string") {
+      DocumentStore.updateTitle(doc.doc_id, title.trim());
+    }
+
+    if (filename && typeof filename === "string" && filename !== doc.filename) {
+      if (!isValidFilename(filename)) {
+        return res.status(400).json({ error: "invalid filename" });
+      }
+      await GitOps.renameFile(doc.repoPath, doc.filename, filename);
+      DocumentStore.updateFilename(doc.doc_id, filename);
+
+      // Update active session if exists
+      const session = sessions.get(doc.doc_id);
+      if (session) {
+        session.filename = filename;
+        for (const client of session.clients) {
+          client.send(JSON.stringify({ type: "renamed", filename }));
+        }
+      }
+    }
+
+    DocumentStore.touchLastModified(doc.doc_id);
+    res.json(DocumentStore.getDocument(doc.doc_id));
+  } catch (e) {
+    console.error("  rename failed:", e.message);
+    res.status(500).json({ error: "rename failed" });
+  }
+});
+
+// Delete document
+app.delete("/api/documents/:docId", async (req, res) => {
+  try {
+    const doc = DocumentStore.getDocument(req.params.docId);
+    if (!doc) return res.status(404).json({ error: "not found" });
+
+    // Evict active session
+    const session = sessions.get(doc.doc_id);
+    if (session) {
+      await session.flush();
+      for (const client of session.clients) {
+        client.send(JSON.stringify({ type: "deleted" }));
+        client.close();
+      }
+      if (session.evictionTimer) clearTimeout(session.evictionTimer);
+      sessions.delete(doc.doc_id);
+    }
+
+    DocumentStore.deleteDocument(doc.doc_id);
+    await require("fs/promises").rm(doc.repoPath, { recursive: true, force: true });
+    console.log(`  deleted document: ${doc.doc_id}`);
+    res.status(204).end();
+  } catch (e) {
+    console.error("  delete failed:", e.message);
+    res.status(500).json({ error: "delete failed" });
+  }
+});
+
+function isValidFilename(name) {
+  if (!name || typeof name !== "string") return false;
+  if (name.length > 100) return false;
+  if (/[\/\\]/.test(name)) return false;
+  if (name.startsWith(".")) return false;
+  if (!/^[a-z0-9][a-z0-9._-]*$/i.test(name)) return false;
+  return true;
+}
+
 // Document-scoped API
 
 app.get("/api/documents/:docId/file", async (req, res) => {

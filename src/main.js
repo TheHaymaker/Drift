@@ -133,9 +133,42 @@ async function loadDocList() {
           <span class="doc-item-title">${escapeHtml(doc.title || "untitled")}</span>
           <span class="doc-item-meta">${escapeHtml(doc.filename)} &middot; ${modified}</span>
         </div>
-        <button class="doc-play-btn" title="play back this poem">&#9654;</button>
+        <div class="doc-item-actions">
+          <button class="doc-action-btn doc-rename-btn" title="rename">&#9998;</button>
+          <button class="doc-action-btn doc-delete-btn" title="delete">&times;</button>
+          <button class="doc-action-btn doc-play-btn" title="play back">&#9654;</button>
+        </div>
       `;
       div.querySelector(".doc-item-info").addEventListener("click", () => navigate("#/write/" + doc.doc_id));
+      div.querySelector(".doc-rename-btn").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const newTitle = prompt("rename poem:", doc.title || "untitled");
+        if (newTitle === null || newTitle.trim() === "") return;
+        const trimmed = newTitle.trim();
+        const newFilename = titleToFilename(trimmed);
+        try {
+          await fetch("/api/documents/" + doc.doc_id, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: trimmed, filename: newFilename }),
+          });
+          loadDocList();
+          showToast("renamed to " + trimmed);
+        } catch (e) {
+          showToast("rename failed");
+        }
+      });
+      div.querySelector(".doc-delete-btn").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm("delete \"" + (doc.title || "untitled") + "\"? this cannot be undone.")) return;
+        try {
+          await fetch("/api/documents/" + doc.doc_id, { method: "DELETE" });
+          loadDocList();
+          showToast("deleted");
+        } catch (e) {
+          showToast("delete failed");
+        }
+      });
       div.querySelector(".doc-play-btn").addEventListener("click", (e) => {
         e.stopPropagation();
         navigate("#/read/" + doc.doc_id);
@@ -147,12 +180,20 @@ async function loadDocList() {
   }
 }
 
+function titleToFilename(title) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".txt";
+}
+
 newPoemBtn.addEventListener("click", async () => {
+  const title = prompt("poem title:");
+  if (title === null) return;
+  const finalTitle = title.trim() || "untitled";
+  const filename = finalTitle === "untitled" ? "poem.txt" : titleToFilename(finalTitle);
   try {
     const res = await fetch("/api/documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ title: finalTitle, filename }),
     });
     const data = await res.json();
     navigate("#/write/" + data.docId);
@@ -230,6 +271,16 @@ function connectWs(docId) {
       pauseThreshold = msg.value;
       thresholdSlider.value = msg.value;
       thresholdValue.textContent = (msg.value / 1000).toFixed(1) + "s";
+    }
+
+    if (msg.type === "renamed") {
+      filenameEl.textContent = msg.filename;
+      showToast("renamed to " + msg.filename);
+    }
+
+    if (msg.type === "deleted") {
+      showToast("this poem has been deleted");
+      navigate("#/");
     }
 
     if (msg.type === "error") {
