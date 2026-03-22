@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
 import { createHighlighter } from "shiki";
 import "shiki-magic-move/style.css";
+import { generateDisintegrationMask } from "./src/disintegration-mask.js";
 
 /**
  * Shiki Magic Move renderer for the poem visualizer.
@@ -9,6 +10,7 @@ import "shiki-magic-move/style.css";
  */
 export default function MagicMoveRenderer({ commits, currentIndex }) {
   const [highlighter, setHighlighter] = useState(null);
+  const [maskUrl, setMaskUrl] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +23,10 @@ export default function MagicMoveRenderer({ commits, currentIndex }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    setMaskUrl(generateDisintegrationMask());
   }, []);
 
   if (!highlighter) {
@@ -71,11 +77,43 @@ export default function MagicMoveRenderer({ commits, currentIndex }) {
         .magic-move-wrapper .shiki-magic-move-container span {
           color: #d4c5a9 !important;
         }
+
+        /* ── Disintegration mask for enter/leave ── */
+        .magic-move-wrapper .shiki-magic-move-enter-active,
+        .magic-move-wrapper .shiki-magic-move-leave-active {
+          mask-image: url('${maskUrl || ""}');
+          -webkit-mask-image: url('${maskUrl || ""}');
+          mask-size: 800% 800%;
+          -webkit-mask-size: 800% 800%;
+          mask-repeat: no-repeat;
+          -webkit-mask-repeat: no-repeat;
+        }
+
+        /* Entering tokens: materialize from dust */
+        .magic-move-wrapper .shiki-magic-move-enter-from {
+          mask-position: 700% 700%;
+          -webkit-mask-position: 700% 700%;
+          opacity: 0;
+        }
         .magic-move-wrapper .shiki-magic-move-enter-active {
           color: #4ade80 !important;
+          transition: all var(--smm-duration, .8s) steps(63),
+                      color var(--smm-duration, .8s) ease !important;
+          mask-position: 0% 0%;
+          -webkit-mask-position: 0% 0%;
+          opacity: 1;
         }
+
+        /* Leaving tokens: disintegrate into dust */
         .magic-move-wrapper .shiki-magic-move-leave-active {
           color: #f87171 !important;
+          transition: all var(--smm-duration, .8s) steps(63),
+                      color var(--smm-duration, .8s) ease !important;
+        }
+        .magic-move-wrapper .shiki-magic-move-leave-to {
+          mask-position: 700% 700%;
+          -webkit-mask-position: 700% 700%;
+          opacity: 0;
         }
       `}</style>
       <ShikiMagicMove
