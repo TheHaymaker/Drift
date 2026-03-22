@@ -56,6 +56,7 @@ const dashboardSubtitle = document.getElementById("dashboardSubtitle");
 
 let currentUser = null;
 let authMode = "login"; // "login" or "register"
+let pendingRoute = null;
 
 async function checkAuth() {
   try {
@@ -71,6 +72,7 @@ async function checkAuth() {
 
 function showAuth() {
   authView.classList.remove("hidden");
+  landingView.classList.add("hidden");
   dashboardView.classList.add("hidden");
   editorView.classList.add("hidden");
   connStatus.classList.add("hidden");
@@ -104,6 +106,13 @@ authForm.addEventListener("submit", async (e) => {
     if (!res.ok) { authError.textContent = data.error; return; }
     currentUser = data;
     authPassword.value = "";
+    if (pendingRoute) {
+      const dest = pendingRoute;
+      pendingRoute = null;
+      location.hash = dest;
+    } else {
+      location.hash = "#/poems";
+    }
     route();
   } catch {
     authError.textContent = "connection failed";
@@ -113,7 +122,8 @@ authForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", async () => {
   await fetch("/api/auth/logout", { method: "POST" });
   currentUser = null;
-  showAuth();
+  location.hash = "#/";
+  route();
 });
 
 // ─── DOM refs ───
@@ -168,13 +178,31 @@ function navigate(hash) {
 }
 
 async function route() {
+  // Always check auth status (but don't block on it)
   if (!currentUser) {
-    const authed = await checkAuth();
-    if (!authed) { showAuth(); return; }
+    await checkAuth();
   }
-  authView.classList.add("hidden");
+
   const r = getRoute();
   stopTypingAnimation();
+
+  // Landing page is always accessible
+  if (r.view === "landing") {
+    authView.classList.add("hidden");
+    unmountPlayback();
+    showLanding();
+    return;
+  }
+
+  // All other views require auth
+  if (!currentUser) {
+    // Remember where user wanted to go after login
+    pendingRoute = location.hash;
+    showAuth();
+    return;
+  }
+
+  authView.classList.add("hidden");
   if (r.view === "read") {
     disconnectWs();
     currentDocId = null;
@@ -262,7 +290,20 @@ function showLanding() {
   editorView.classList.add("hidden");
   connStatus.classList.add("hidden");
   document.title = "drift \u2014 where every pause is a verse";
+  updateLandingNav();
   startTypingAnimation();
+}
+
+function updateLandingNav() {
+  const signInLink = document.getElementById("landingSignInLink");
+  if (signInLink) {
+    if (currentUser) {
+      signInLink.style.display = "none";
+    } else {
+      signInLink.style.display = "";
+      signInLink.textContent = "Log In / Sign Up";
+    }
+  }
 }
 
 // ─── Dashboard ───
@@ -426,7 +467,7 @@ newPoemBtn.addEventListener("click", async () => {
   }
 });
 
-backBtn.addEventListener("click", () => navigate("#/poems"));
+backBtn.addEventListener("click", () => navigate("#/"));
 
 // ─── Editor ───
 
@@ -886,6 +927,31 @@ editor.addEventListener("focus", async () => {
   status.textContent = "ready";
   status.className = "status-pill";
 });
+
+// ─── Landing page auth-aware links ───
+
+function handleStartWritingClick(e) {
+  if (!currentUser) {
+    e.preventDefault();
+    pendingRoute = "#/poems";
+    showAuth();
+  }
+  // If logged in, default href="#/poems" navigates normally
+}
+
+const landingStartWriting = document.getElementById("landingStartWriting");
+const landingCtaStart = document.getElementById("landingCtaStart");
+const landingSignInLink = document.getElementById("landingSignInLink");
+
+if (landingStartWriting) landingStartWriting.addEventListener("click", handleStartWritingClick);
+if (landingCtaStart) landingCtaStart.addEventListener("click", handleStartWritingClick);
+if (landingSignInLink) {
+  landingSignInLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    pendingRoute = null;
+    showAuth();
+  });
+}
 
 // ─── Init: route on load ───
 route();

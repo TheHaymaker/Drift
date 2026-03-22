@@ -104,6 +104,16 @@ body {
   margin-bottom: 8px;
 }
 
+.dashboard-home-link {
+  text-decoration: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.dashboard-home-link:hover {
+  color: var(--accent);
+}
+
 .dashboard-subtitle {
   font-size: 1.2rem;
   color: var(--text-dim);
