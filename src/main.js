@@ -8,6 +8,7 @@ let playbackRoot = null;
 const playbackContainer = document.getElementById("playbackView");
 
 function mountPlayback(docId) {
+  document.getElementById("landingView").classList.add("hidden");
   document.getElementById("dashboardView").classList.add("hidden");
   document.getElementById("editorView").classList.add("hidden");
   document.getElementById("connStatus").classList.add("hidden");
@@ -20,7 +21,7 @@ function mountPlayback(docId) {
   playbackRoot.render(
     createElement(Playback, {
       docId,
-      onBack: () => { location.hash = "#/"; },
+      onBack: () => { location.hash = "#/poems"; },
     })
   );
 }
@@ -33,6 +34,7 @@ function unmountPlayback() {
 }
 
 // ─── DOM refs ───
+const landingView = document.getElementById("landingView");
 const dashboardView = document.getElementById("dashboardView");
 const editorView = document.getElementById("editorView");
 const connStatus = document.getElementById("connStatus");
@@ -74,7 +76,8 @@ function getRoute() {
   if (writeMatch) return { view: "write", docId: writeMatch[1] };
   const readMatch = hash.match(/^#\/read\/(.+)$/);
   if (readMatch) return { view: "read", docId: readMatch[1] };
-  return { view: "dashboard" };
+  if (hash === "#/poems") return { view: "dashboard" };
+  return { view: "landing" };
 }
 
 function navigate(hash) {
@@ -83,6 +86,7 @@ function navigate(hash) {
 
 function route() {
   const r = getRoute();
+  stopTypingAnimation();
   if (r.view === "read") {
     disconnectWs();
     currentDocId = null;
@@ -92,19 +96,93 @@ function route() {
     unmountPlayback();
     if (r.view === "write") {
       showEditor(r.docId);
-    } else {
+    } else if (r.view === "dashboard") {
       showDashboard();
+    } else {
+      showLanding();
     }
   }
 }
 
 window.addEventListener("hashchange", route);
 
+// ─── Landing ───
+
+let typingTimer = null;
+
+const typingPoem = [
+  "The water remembers the sky,",
+  "The shadows hold the heat of the day,",
+  "And we are but ghosts in the garden.",
+];
+
+function stopTypingAnimation() {
+  if (typingTimer) {
+    clearTimeout(typingTimer);
+    typingTimer = null;
+  }
+}
+
+function startTypingAnimation() {
+  const container = document.getElementById("typingLines");
+  if (!container) return;
+  container.innerHTML = "";
+
+  let lineIdx = 0;
+  let charIdx = 0;
+  let currentLineEl = null;
+
+  function tick() {
+    if (lineIdx >= typingPoem.length) {
+      // Add blinking cursor to last line
+      if (currentLineEl) {
+        const cursor = document.createElement("span");
+        cursor.className = "typing-cursor";
+        cursor.textContent = "|";
+        currentLineEl.appendChild(cursor);
+      }
+      return;
+    }
+
+    if (charIdx === 0) {
+      currentLineEl = document.createElement("p");
+      currentLineEl.className = "typing-line";
+      container.appendChild(currentLineEl);
+    }
+
+    const line = typingPoem[lineIdx];
+    currentLineEl.textContent = line.slice(0, charIdx + 1);
+    charIdx++;
+
+    if (charIdx >= line.length) {
+      lineIdx++;
+      charIdx = 0;
+      typingTimer = setTimeout(tick, 400);
+    } else {
+      typingTimer = setTimeout(tick, 50 + Math.random() * 40);
+    }
+  }
+
+  typingTimer = setTimeout(tick, 800);
+}
+
+function showLanding() {
+  disconnectWs();
+  currentDocId = null;
+  landingView.classList.remove("hidden");
+  dashboardView.classList.add("hidden");
+  editorView.classList.add("hidden");
+  connStatus.classList.add("hidden");
+  document.title = "drift \u2014 where every pause is a verse";
+  startTypingAnimation();
+}
+
 // ─── Dashboard ───
 
 function showDashboard() {
   disconnectWs();
   currentDocId = null;
+  landingView.classList.add("hidden");
   dashboardView.classList.remove("hidden");
   editorView.classList.add("hidden");
   connStatus.classList.add("hidden");
@@ -202,13 +280,14 @@ newPoemBtn.addEventListener("click", async () => {
   }
 });
 
-backBtn.addEventListener("click", () => navigate("#/"));
+backBtn.addEventListener("click", () => navigate("#/poems"));
 
 // ─── Editor ───
 
 function showEditor(docId, readOnly) {
   if (currentDocId === docId && ws && ws.readyState === 1) return;
   currentDocId = docId;
+  landingView.classList.add("hidden");
   dashboardView.classList.add("hidden");
   editorView.classList.remove("hidden");
   connStatus.classList.remove("hidden");
@@ -280,7 +359,7 @@ function connectWs(docId) {
 
     if (msg.type === "deleted") {
       showToast("this poem has been deleted");
-      navigate("#/");
+      navigate("#/poems");
     }
 
     if (msg.type === "error") {
