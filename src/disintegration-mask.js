@@ -1,23 +1,26 @@
 /**
  * Generates a pixel-disintegration sprite sheet as a data URL.
  *
- * The sprite sheet is an 8×8 grid of frames (64 total).
- * Frame 0 = fully visible (all white), frame 63 = fully hidden (all black).
+ * The sprite sheet is a single row of 64 frames (1×64 layout).
+ * Frame 0 = fully visible (all pixels opaque), frame 63 = fully hidden (all transparent).
  * Each pixel is assigned a random threshold; frames progressively turn
- * pixels from white to black based on that threshold.
+ * pixels transparent based on that threshold.
  *
- * The resulting data URL is used as a CSS mask-image with
- * mask-size: 800% 800% and stepped transitions through mask-position.
+ * Uses the ALPHA channel for masking (CSS mask-mode defaults to alpha).
+ * Used with mask-size: 6400% 100% and a single-axis mask-position
+ * transition with steps(63).
  */
 
 let cached = null;
 
-export function generateDisintegrationMask(cellSize = 128, cols = 8, rows = 8) {
+export const MASK_FRAMES = 64;
+
+export function generateDisintegrationMask(cellSize = 128) {
   if (cached) return cached;
 
-  const totalFrames = cols * rows; // 64
-  const width = cellSize * cols;
-  const height = cellSize * rows;
+  const frames = MASK_FRAMES;
+  const width = cellSize * frames;
+  const height = cellSize;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -30,26 +33,22 @@ export function generateDisintegrationMask(cellSize = 128, cols = 8, rows = 8) {
     thresholds[i] = Math.random();
   }
 
-  // Draw each frame
+  // Draw each frame as a column in the single-row strip
   const imgData = ctx.createImageData(cellSize, cellSize);
-  for (let frame = 0; frame < totalFrames; frame++) {
-    const col = frame % cols;
-    const row = Math.floor(frame / cols);
-
-    // progress: 0 = fully visible (white), 1 = fully hidden (black)
-    const progress = frame / (totalFrames - 1);
+  for (let frame = 0; frame < frames; frame++) {
+    // progress: 0 = fully visible, 1 = fully hidden
+    const progress = frame / (frames - 1);
 
     for (let i = 0; i < thresholds.length; i++) {
-      // Pixel is white (visible) if its threshold > progress
-      const visible = thresholds[i] > progress ? 255 : 0;
       const off = i * 4;
-      imgData.data[off] = visible;
-      imgData.data[off + 1] = visible;
-      imgData.data[off + 2] = visible;
-      imgData.data[off + 3] = 255;
+      // White pixel, vary alpha: opaque if threshold > progress, transparent otherwise
+      imgData.data[off] = 255;
+      imgData.data[off + 1] = 255;
+      imgData.data[off + 2] = 255;
+      imgData.data[off + 3] = thresholds[i] > progress ? 255 : 0;
     }
 
-    ctx.putImageData(imgData, col * cellSize, row * cellSize);
+    ctx.putImageData(imgData, frame * cellSize, 0);
   }
 
   cached = canvas.toDataURL("image/png");

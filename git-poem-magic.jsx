@@ -83,37 +83,38 @@ export default function MagicMoveRenderer({ commits, currentIndex }) {
         .magic-move-wrapper .shiki-magic-move-leave-active {
           mask-image: url('${maskUrl || ""}');
           -webkit-mask-image: url('${maskUrl || ""}');
-          mask-size: 800% 800%;
-          -webkit-mask-size: 800% 800%;
+          mask-size: 6400% 100%;
+          -webkit-mask-size: 6400% 100%;
           mask-repeat: no-repeat;
           -webkit-mask-repeat: no-repeat;
         }
 
-        /* Entering tokens: materialize from dust */
+        /* Entering tokens: materialize from dust (frame 63 → frame 0) */
         .magic-move-wrapper .shiki-magic-move-enter-from {
-          mask-position: 700% 700%;
-          -webkit-mask-position: 700% 700%;
-          opacity: 0;
+          mask-position: 100% 0;
+          -webkit-mask-position: 100% 0;
         }
         .magic-move-wrapper .shiki-magic-move-enter-active {
           color: #4ade80 !important;
-          transition: all var(--smm-duration, .8s) steps(63),
+          transition: mask-position var(--smm-duration, .8s) steps(63),
+                      -webkit-mask-position var(--smm-duration, .8s) steps(63),
                       color var(--smm-duration, .8s) ease !important;
-          mask-position: 0% 0%;
-          -webkit-mask-position: 0% 0%;
-          opacity: 1;
+          mask-position: 0% 0;
+          -webkit-mask-position: 0% 0;
         }
 
-        /* Leaving tokens: disintegrate into dust */
+        /* Leaving tokens: disintegrate into dust (frame 0 → frame 63) */
         .magic-move-wrapper .shiki-magic-move-leave-active {
           color: #f87171 !important;
-          transition: all var(--smm-duration, .8s) steps(63),
+          transition: mask-position var(--smm-duration, .8s) steps(63),
+                      -webkit-mask-position var(--smm-duration, .8s) steps(63),
                       color var(--smm-duration, .8s) ease !important;
+          mask-position: 0% 0;
+          -webkit-mask-position: 0% 0;
         }
         .magic-move-wrapper .shiki-magic-move-leave-to {
-          mask-position: 700% 700%;
-          -webkit-mask-position: 700% 700%;
-          opacity: 0;
+          mask-position: 100% 0;
+          -webkit-mask-position: 100% 0;
         }
       `}</style>
       <ShikiMagicMove
