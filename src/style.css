@@ -997,6 +997,21 @@ input[type="range"]::-webkit-slider-thumb {
   position: relative;
 }
 
+.demo-playback-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-radius: 8px;
+  overflow-y: auto;
+}
+
+.demo-playback-overlay > div {
+  min-height: 100% !important;
+  padding: 24px 16px 32px !important;
+  background: transparent !important;
+}
+
 .demo-header {
   display: flex;
   align-items: center;
