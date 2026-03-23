@@ -184,7 +184,7 @@ async function route() {
   }
 
   const r = getRoute();
-  stopTypingAnimation();
+  destroyDemo();
 
   // Landing page is always accessible
   if (r.view === "landing") {
@@ -224,65 +224,6 @@ window.addEventListener("hashchange", route);
 
 // ─── Landing ───
 
-let typingTimer = null;
-
-const typingPoem = [
-  "The water remembers the sky,",
-  "The shadows hold the heat of the day,",
-  "And we are but ghosts in the garden.",
-];
-
-function stopTypingAnimation() {
-  if (typingTimer) {
-    clearTimeout(typingTimer);
-    typingTimer = null;
-  }
-  destroyDemo();
-}
-
-function startTypingAnimation() {
-  const container = document.getElementById("typingLines");
-  if (!container) return;
-  container.innerHTML = "";
-
-  let lineIdx = 0;
-  let charIdx = 0;
-  let currentLineEl = null;
-
-  function tick() {
-    if (lineIdx >= typingPoem.length) {
-      // Add blinking cursor to last line
-      if (currentLineEl) {
-        const cursor = document.createElement("span");
-        cursor.className = "typing-cursor";
-        cursor.textContent = "|";
-        currentLineEl.appendChild(cursor);
-      }
-      return;
-    }
-
-    if (charIdx === 0) {
-      currentLineEl = document.createElement("p");
-      currentLineEl.className = "typing-line";
-      container.appendChild(currentLineEl);
-    }
-
-    const line = typingPoem[lineIdx];
-    currentLineEl.textContent = line.slice(0, charIdx + 1);
-    charIdx++;
-
-    if (charIdx >= line.length) {
-      lineIdx++;
-      charIdx = 0;
-      typingTimer = setTimeout(tick, 400);
-    } else {
-      typingTimer = setTimeout(tick, 50 + Math.random() * 40);
-    }
-  }
-
-  typingTimer = setTimeout(tick, 800);
-}
-
 function showLanding() {
   disconnectWs();
   currentDocId = null;
@@ -292,7 +233,6 @@ function showLanding() {
   connStatus.classList.add("hidden");
   document.title = "drift \u2014 where every pause is a verse";
   updateLandingNav();
-  startTypingAnimation();
   initDemo();
 }
 

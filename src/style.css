@@ -819,38 +819,6 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--text-dim);
 }
 
-/* Typing demo */
-
-.landing-typing-demo {
-  padding: 80px 32px;
-  display: flex;
-  justify-content: center;
-}
-
-.landing-typing-area {
-  max-width: 600px;
-  width: 100%;
-  min-height: 180px;
-  padding: 48px;
-}
-
-.typing-line {
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.5rem;
-  line-height: 2.2;
-  color: var(--text-dim);
-}
-
-.typing-cursor {
-  color: var(--accent);
-  animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
 /* Process */
 
 .landing-process {
@@ -999,7 +967,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* Interactive demo editor */
 
 .landing-demo {
-  padding: 80px 48px;
+  padding: 40px 48px 80px;
   max-width: 900px;
   margin: 0 auto;
 }
@@ -1249,7 +1217,7 @@ input[type="range"]::-webkit-slider-thumb {
     max-height: 160px;
   }
   .landing-demo {
-    padding: 60px 20px;
+    padding: 30px 20px 60px;
   }
 }
 
