@@ -1404,18 +1404,17 @@ input[type="range"]::-webkit-slider-thumb {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding: 28px 0 28px 16px;
+  padding: 28px 0 0 16px;
   gap: 0;
   user-select: none;
 }
 
 .syl-gutter-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 6px;
-  /* Height matches one syl-line (overlay row + text row) */
-  height: calc(1.15em + 1.7em); /* brace region + text line-height */
-  padding-bottom: 0;
+  /* Height matches the textarea line-height (2 * font-size) */
+  height: 2.5rem;
 }
 
 .gutter-sylcount {
@@ -1449,83 +1448,29 @@ input[type="range"]::-webkit-slider-thumb {
 /* ── Contenteditable content area ── */
 .syl-content {
   flex: 1;
-  padding: 28px 40px 28px 12px;
+  display: flex;
+  min-height: 0;
+}
+
+/* ── Textarea (replaces contenteditable) ── */
+.syl-textarea {
+  flex: 1;
+  resize: none;
+  background: transparent;
+  border: none;
   outline: none;
-  caret-color: var(--text);
-  overflow: visible;
-}
-
-/* ── One poem line ── */
-.syl-line {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ── Overlay row (aria-hidden, non-editable) ── */
-.syl-overlay-row {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  pointer-events: none;
-  user-select: none;
-  line-height: 1;
-  /* Small vertical gap below the braces before the text row */
-  margin-bottom: 2px;
-}
-
-/* ── Space token in overlay ── */
-.syl-ospace {
-  display: inline-flex;
-  align-self: flex-end;
-  visibility: hidden; /* preserve space width, brace not needed for spaces */
-  white-space: pre;
-}
-
-/* ── Word group in overlay ── */
-.syl-oword {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: flex-end;
-}
-
-/* ── Single syllable column: brace on top, ghost text below ── */
-.syl-unit {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: stretch;
-  color: var(--accent);
-  opacity: 0.65;
-}
-
-/* Scalable over-brace SVG */
-.syl-brace {
-  display: block;
-  min-width: 6px;
-}
-
-/* Ghost text: invisible but occupies correct width to size the brace */
-.syl-ghost {
-  visibility: hidden;
-  white-space: pre;
+  color: var(--text);
   font-family: 'EB Garamond', Georgia, serif;
   font-size: 1.25rem;
-  line-height: 0; /* no extra height; brace SVG sets the height */
+  line-height: 2;
+  letter-spacing: 0.01em;
+  caret-color: var(--accent);
+  padding: 28px 40px 28px 12px;
 }
 
-/* ── Text row (the editable content) ── */
-.syl-text-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  line-height: 1.65;
-  white-space: pre-wrap;
-  word-break: break-word;
-  padding-bottom: 6px; /* breathing room between lines */
-}
-
-.syl-text-row > span {
-  white-space: pre;
+.syl-textarea::placeholder {
+  color: var(--text-faint);
+  font-style: italic;
 }
 
 /* ── Haiku status strip ── */
