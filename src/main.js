@@ -243,7 +243,7 @@ let demoIsTyping = false;
 let demoAnimFrame = null;
 let demoCommits = [];
 let demoPrevWordCount = 0;
-const demoThreshold = 2500;
+const demoThreshold = 1200;
 let demoInputHandler = null;
 
 function wordCount(text) {
@@ -292,6 +292,11 @@ function initDemo() {
 
   demoEditor.addEventListener("input", demoInputHandler);
 
+  const demoPlaybackBtn = document.getElementById("demoPlaybackBtn");
+  if (demoPlaybackBtn) {
+    demoPlaybackBtn.onclick = () => mountDemoPlayback();
+  }
+
   function showDemoToast(msg) {
     demoToast.textContent = msg;
     demoToast.classList.add("show");
@@ -314,7 +319,9 @@ function initDemo() {
     }
 
     demoPrevWordCount = wc;
-    const commit = { hash, message, index: demoCommits.length };
+    const lines = content.split("\n");
+    const date = new Date().toLocaleString();
+    const commit = { hash, message, lines, date, index: demoCommits.length };
     demoCommits.push(commit);
 
     // Update commit count
@@ -348,8 +355,9 @@ function initDemo() {
       demoHint.textContent = "Your first snapshot! Keep going\u2026";
     } else if (count === 2) {
       demoHint.textContent = "See how each pause captures your progress?";
-    } else if (count === 3) {
-      demoHint.textContent = "Every pause is a verse.";
+    } else if (count >= 3) {
+      demoHint.textContent = "";
+      showDemoPlaybackButton();
     }
   }
 
@@ -387,9 +395,49 @@ function destroyDemo() {
     if (demoEditor) demoEditor.removeEventListener("input", demoInputHandler);
     demoInputHandler = null;
   }
+  // Hide playback button if present
+  const playBtn = document.getElementById("demoPlaybackBtn");
+  if (playBtn) playBtn.classList.add("hidden");
   demoCommits = [];
   demoPrevWordCount = 0;
   demoIsTyping = false;
+}
+
+function showDemoPlaybackButton() {
+  const btn = document.getElementById("demoPlaybackBtn");
+  if (!btn || !btn.classList.contains("hidden")) return;
+  btn.classList.remove("hidden");
+}
+
+function mountDemoPlayback() {
+  if (demoCommits.length < 3) return;
+
+  // Build playback data matching Playback component's expected format
+  const playbackData = { commits: demoCommits.map(c => ({
+    hash: c.hash,
+    message: c.message,
+    date: c.date,
+    lines: c.lines,
+  })) };
+
+  document.getElementById("landingView").classList.add("hidden");
+  playbackContainer.classList.remove("hidden");
+  document.title = "drift \u2014 demo playback";
+
+  if (!playbackRoot) {
+    playbackRoot = createRoot(playbackContainer);
+  }
+  playbackRoot.render(
+    createElement(Playback, {
+      initialData: playbackData,
+      onBack: () => {
+        playbackContainer.classList.add("hidden");
+        playbackRoot.render(null);
+        document.getElementById("landingView").classList.remove("hidden");
+        document.title = "drift \u2014 where every pause is a verse";
+      },
+    })
+  );
 }
 
 function updateLandingNav() {

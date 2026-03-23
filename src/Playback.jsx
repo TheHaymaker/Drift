@@ -278,8 +278,8 @@ function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay, s
 }
 
 // ─── Main Playback Component ───
-export default function Playback({ docId, onBack }) {
-  const [data, setData] = useState(null);
+export default function Playback({ docId, onBack, initialData }) {
+  const [data, setData] = useState(initialData || null);
   const [error, setError] = useState(null);
   const [ci, setCi] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -294,6 +294,7 @@ export default function Playback({ docId, onBack }) {
   }, []);
 
   useEffect(() => {
+    if (initialData) return;
     fetch(`/api/documents/${docId}/playback`)
       .then(r => {
         if (!r.ok) throw new Error("failed to load");
@@ -307,7 +308,7 @@ export default function Playback({ docId, onBack }) {
         setData(d);
       })
       .catch(() => setError("failed to load playback data"));
-  }, [docId]);
+  }, [docId, initialData]);
 
   const handleNavigate = useCallback((n) => {
     if (!data) return;
