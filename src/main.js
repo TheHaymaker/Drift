@@ -245,6 +245,7 @@ let demoCommits = [];
 let demoPrevWordCount = 0;
 const demoThreshold = 1200;
 let demoInputHandler = null;
+let demoPlaybackRoot = null;
 
 function wordCount(text) {
   const trimmed = text.trim();
@@ -395,9 +396,16 @@ function destroyDemo() {
     if (demoEditor) demoEditor.removeEventListener("input", demoInputHandler);
     demoInputHandler = null;
   }
-  // Hide playback button if present
+  // Hide playback button and overlay if present
   const playBtn = document.getElementById("demoPlaybackBtn");
   if (playBtn) playBtn.classList.add("hidden");
+  const overlay = document.getElementById("demoPlaybackOverlay");
+  if (overlay) {
+    overlay.classList.add("hidden");
+    if (demoPlaybackRoot) {
+      demoPlaybackRoot.render(null);
+    }
+  }
   demoCommits = [];
   demoPrevWordCount = 0;
   demoIsTyping = false;
@@ -412,6 +420,9 @@ function showDemoPlaybackButton() {
 function mountDemoPlayback() {
   if (demoCommits.length < 3) return;
 
+  const overlay = document.getElementById("demoPlaybackOverlay");
+  if (!overlay) return;
+
   // Build playback data matching Playback component's expected format
   const playbackData = { commits: demoCommits.map(c => ({
     hash: c.hash,
@@ -420,21 +431,17 @@ function mountDemoPlayback() {
     lines: c.lines,
   })) };
 
-  document.getElementById("landingView").classList.add("hidden");
-  playbackContainer.classList.remove("hidden");
-  document.title = "drift \u2014 demo playback";
+  overlay.classList.remove("hidden");
 
-  if (!playbackRoot) {
-    playbackRoot = createRoot(playbackContainer);
+  if (!demoPlaybackRoot) {
+    demoPlaybackRoot = createRoot(overlay);
   }
-  playbackRoot.render(
+  demoPlaybackRoot.render(
     createElement(Playback, {
       initialData: playbackData,
       onBack: () => {
-        playbackContainer.classList.add("hidden");
-        playbackRoot.render(null);
-        document.getElementById("landingView").classList.remove("hidden");
-        document.title = "drift \u2014 where every pause is a verse";
+        overlay.classList.add("hidden");
+        demoPlaybackRoot.render(null);
       },
     })
   );
