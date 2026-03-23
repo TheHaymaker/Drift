@@ -233,43 +233,43 @@ function MagicMoveRenderer({ commits, currentIndex }) {
           color: #d4c5a9 !important;
         }
 
-        /* ── Disintegration mask for enter/leave ── */
+        /* ── Keyframe animations for sprite-sheet mask ── */
+        @keyframes smm-disintegrate {
+          from { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+          to   { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+        }
+        @keyframes smm-materialize {
+          from { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+          to   { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+        }
+
+        /* Apply mask image to all entering/leaving tokens */
         .magic-move-wrapper .shiki-magic-move-enter-active,
         .magic-move-wrapper .shiki-magic-move-leave-active {
           mask-image: url('${maskUrl || ""}');
           -webkit-mask-image: url('${maskUrl || ""}');
-          mask-size: 6400% 100%;
-          -webkit-mask-size: 6400% 100%;
+          mask-size: 2400% 100%;
+          -webkit-mask-size: 2400% 100%;
           mask-repeat: no-repeat;
           -webkit-mask-repeat: no-repeat;
         }
 
-        /* Entering tokens: materialize from dust (frame 63 → frame 0) */
-        .magic-move-wrapper .shiki-magic-move-enter-from {
-          mask-position: 100% 0;
-          -webkit-mask-position: 100% 0;
-        }
-        .magic-move-wrapper .shiki-magic-move-enter-active {
-          color: #4ade80 !important;
-          transition: mask-position var(--smm-duration, .8s) steps(63),
-                      -webkit-mask-position var(--smm-duration, .8s) steps(63),
-                      color var(--smm-duration, .8s) ease !important;
-          mask-position: 0% 0;
-          -webkit-mask-position: 0% 0;
+        /* Override library opacity:0 — the mask handles visibility */
+        .magic-move-wrapper .shiki-magic-move-enter-from,
+        .magic-move-wrapper .shiki-magic-move-leave-to {
+          opacity: 1 !important;
         }
 
-        /* Leaving tokens: disintegrate into dust (frame 0 → frame 63) */
+        /* Entering tokens: materialize from dust */
+        .magic-move-wrapper .shiki-magic-move-enter-active {
+          color: #4ade80 !important;
+          animation: smm-materialize var(--smm-duration, .8s) steps(23) forwards !important;
+        }
+
+        /* Leaving tokens: disintegrate into dust */
         .magic-move-wrapper .shiki-magic-move-leave-active {
           color: #f87171 !important;
-          transition: mask-position var(--smm-duration, .8s) steps(63),
-                      -webkit-mask-position var(--smm-duration, .8s) steps(63),
-                      color var(--smm-duration, .8s) ease !important;
-          mask-position: 0% 0;
-          -webkit-mask-position: 0% 0;
-        }
-        .magic-move-wrapper .shiki-magic-move-leave-to {
-          mask-position: 100% 0;
-          -webkit-mask-position: 100% 0;
+          animation: smm-disintegrate var(--smm-duration, .8s) steps(23) forwards !important;
         }
       `}</style>
       <ShikiMagicMove
