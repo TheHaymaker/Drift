@@ -179,6 +179,7 @@
     <div class="editor-header">
       <span class="editor-title" id="backBtn">drift</span>
       <span class="editor-filename" id="filename">poem.txt</span>
+      <button class="syl-mode-btn" id="sylModeBtn" title="Toggle syllable mode">syllables</button>
       <span class="status-pill" id="status">connecting</span>
     </div>
     <div class="editor-area">
@@ -188,6 +189,8 @@
         spellcheck="false"
         autofocus
       ></textarea>
+      <!-- Syllable editor React mount — shown when syllable mode is active -->
+      <div id="syllableEditorMount"></div>
       <div class="diff-panel hidden" id="diffPanel">
         <div class="diff-header">
           <span class="diff-title" id="diffTitle">diff</span>
