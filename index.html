@@ -42,9 +42,37 @@
     <p class="landing-hero-sub">Drift captures the evolution of your poetry. Stop writing,<br>and it commits. Play back your process and see how your<br>words have grown.</p>
   </section>
 
-  <section class="landing-typing-demo">
-    <div class="landing-typing-area">
-      <div class="landing-typing-lines" id="typingLines"></div>
+  <section class="landing-demo" id="tryIt">
+    <h2 class="landing-demo-heading"><em>Experience it yourself.</em></h2>
+    <p class="landing-demo-sub">Start typing below. When you pause, Drift captures a snapshot.</p>
+
+    <div class="demo-editor">
+      <div class="demo-header">
+        <span class="demo-filename">demo.txt</span>
+        <span class="status-pill" id="demoStatus">ready</span>
+      </div>
+      <div class="demo-body">
+        <textarea id="demoEditor" placeholder="begin writing here... try pausing for a moment." spellcheck="false"></textarea>
+        <div class="demo-sidebar">
+          <div class="demo-sidebar-title">SNAPSHOTS</div>
+          <div class="demo-commit-count"><span id="demoCommitCount">0</span> snapshots</div>
+          <div class="demo-commits" id="demoCommits">
+            <div class="demo-empty">your snapshots will appear here.</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-footer">
+        <div class="demo-ring">
+          <svg viewBox="0 0 36 36">
+            <circle class="track" cx="18" cy="18" r="14" />
+            <circle class="fill" id="demoFill" cx="18" cy="18" r="14" />
+          </svg>
+        </div>
+        <span class="demo-ring-label" id="demoRingLabel">pause &rarr; commit</span>
+        <span class="demo-hint" id="demoHint"></span>
+        <button class="demo-playback-btn hidden" id="demoPlaybackBtn">&#9654; play back your process</button>
+      </div>
+      <div class="demo-toast" id="demoToast"></div>
     </div>
   </section>
 
@@ -86,39 +114,6 @@
           <p>&ldquo;The design treats the work not as data, but as a living manuscript that breathes with the author.&rdquo;</p>
         </div>
       </div>
-    </div>
-  </section>
-
-  <section class="landing-demo" id="tryIt">
-    <h2 class="landing-demo-heading"><em>Experience it yourself.</em></h2>
-    <p class="landing-demo-sub">Start typing below. When you pause, Drift captures a snapshot.</p>
-
-    <div class="demo-editor">
-      <div class="demo-header">
-        <span class="demo-filename">demo.txt</span>
-        <span class="status-pill" id="demoStatus">ready</span>
-      </div>
-      <div class="demo-body">
-        <textarea id="demoEditor" placeholder="begin writing here... try pausing for a moment." spellcheck="false"></textarea>
-        <div class="demo-sidebar">
-          <div class="demo-sidebar-title">SNAPSHOTS</div>
-          <div class="demo-commit-count"><span id="demoCommitCount">0</span> snapshots</div>
-          <div class="demo-commits" id="demoCommits">
-            <div class="demo-empty">your snapshots will appear here.</div>
-          </div>
-        </div>
-      </div>
-      <div class="demo-footer">
-        <div class="demo-ring">
-          <svg viewBox="0 0 36 36">
-            <circle class="track" cx="18" cy="18" r="14" />
-            <circle class="fill" id="demoFill" cx="18" cy="18" r="14" />
-          </svg>
-        </div>
-        <span class="demo-ring-label" id="demoRingLabel">pause &rarr; commit</span>
-        <span class="demo-hint" id="demoHint"></span>
-      </div>
-      <div class="demo-toast" id="demoToast"></div>
     </div>
   </section>
 
