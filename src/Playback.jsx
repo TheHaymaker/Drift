@@ -2,175 +2,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createHighlighter } from "shiki";
 import { ShikiMagicMove } from "shiki-magic-move/react";
 import "shiki-magic-move/style.css";
-import { buildFrames } from "./build-frames.js";
 import { generateDisintegrationMask } from "./disintegration-mask.js";
 
-// ─── Layout constants ───
-const LINE_H = 42;
-const CH_W = 11.5;
-const PAD_LEFT = 32;
-const PAD_TOP = 16;
-
-function atomY(atom) {
-  let y = PAD_TOP;
-  for (let l = 0; l < atom.line; l++) y += LINE_H;
-  return y;
-}
-
-function atomX(atom) {
-  return PAD_LEFT + atom.offset * CH_W;
-}
-
-function lerp(a, b, t) { return a + (b - a) * t; }
-
-function useAnim(dur = 1100) {
-  const [t, setT] = useState(1);
-  const raf = useRef(null);
-  const t0 = useRef(0);
-  const go = useCallback(() => {
-    t0.current = performance.now();
-    setT(0);
-    const tick = (now) => {
-      const p = Math.min((now - t0.current) / dur, 1);
-      const e = 1 - Math.pow(1 - p, 3.5);
-      setT(e);
-      if (p < 1) raf.current = requestAnimationFrame(tick);
-    };
-    cancelAnimationFrame(raf.current);
-    raf.current = requestAnimationFrame(tick);
-  }, [dur]);
-  useEffect(() => () => cancelAnimationFrame(raf.current), []);
-  return { t, go };
-}
-
-// ─── Char Morph ───
-function CharMorph({ charDiff, t }) {
-  return (
-    <span style={{ position: "relative", display: "inline" }}>
-      {charDiff.map((seg, i) => {
-        if (seg.type === "keep") {
-          return <span key={i} style={{ color: "#d4c5a9" }}>{seg.text}</span>;
-        }
-        if (seg.type === "delete") {
-          return (
-            <span key={i} style={{
-              color: "#f87171",
-              opacity: Math.max(0, 1 - t * 2.5),
-              display: "inline-block",
-              transform: `scaleX(${Math.max(0, 1 - t * 2)})`,
-              transformOrigin: "right",
-              width: t > 0.5 ? 0 : "auto",
-              overflow: "hidden",
-            }}>
-              {seg.text}
-            </span>
-          );
-        }
-        if (seg.type === "insert") {
-          return (
-            <span key={i} style={{
-              color: "#4ade80",
-              opacity: Math.max(0, (t - 0.3) * 1.6),
-              display: "inline-block",
-              transform: `scaleX(${Math.min(1, Math.max(0, (t - 0.2) * 1.5))})`,
-              transformOrigin: "left",
-            }}>
-              {seg.text}
-            </span>
-          );
-        }
-        return null;
-      })}
-    </span>
-  );
-}
-
-// ─── Word Atom ───
-function WordAtom({ atom, prevAtom, t }) {
-  const currX = atomX(atom);
-  const currY = atomY(atom);
-  const prevX = prevAtom ? atomX(prevAtom) : currX;
-  const prevY = prevAtom ? atomY(prevAtom) : currY;
-
-  const x = lerp(prevX, currX, t);
-  const y = lerp(prevY, currY, t);
-
-  let opacity = 1;
-  let color = "#d4c5a9";
-
-  if (atom.status === "born") {
-    opacity = Math.max(0, (t - 0.15) * 1.3);
-    color = t < 0.9 ? "#4ade80" : "#d4c5a9";
-  } else if (atom.status === "died") {
-    opacity = Math.max(0, 1 - t * 1.8);
-    color = "#f87171";
-  } else if (atom.status === "morphed") {
-    color = t < 0.85 ? "#fbbf24" : "#d4c5a9";
-  }
-
-  return (
-    <div style={{
-      position: "absolute",
-      left: 0,
-      top: 0,
-      transform: `translate(${x}px, ${y}px)`,
-      opacity,
-      fontFamily: "'EB Garamond', Georgia, serif",
-      fontSize: "1.45rem",
-      lineHeight: `${LINE_H}px`,
-      color,
-      whiteSpace: "pre",
-      letterSpacing: "0.01em",
-      willChange: "transform, opacity",
-    }}>
-      {atom.status === "morphed" && atom.charDiff ? (
-        <CharMorph charDiff={atom.charDiff} t={t} />
-      ) : (
-        atom.text
-      )}
-    </div>
-  );
-}
-
-// ─── Atoms Renderer ───
-function AtomsRenderer({ frames, currentIndex, prevIndex, t }) {
-  const currFrame = frames[currentIndex];
-  const prevFrame = frames[prevIndex];
-  const prevLookup = {};
-  for (const a of prevFrame) { prevLookup[a.id] = a; }
-
-  const renderAtoms = currFrame.filter(a => a.type !== "blank");
-  const maxLine = Math.max(0, ...currFrame.map(a => a.line));
-  const containerH = PAD_TOP + (maxLine + 1) * LINE_H + 40;
-
-  return (
-    <div style={{
-      width: "100%",
-      maxWidth: "580px",
-      position: "relative",
-      height: `${containerH}px`,
-      transition: "height 1s cubic-bezier(0.23,1,0.32,1)",
-      zIndex: 1,
-    }}>
-      <div style={{
-        position: "absolute", left: PAD_LEFT - 16, top: 0, bottom: 0, width: "1px",
-        background: "linear-gradient(to bottom, transparent, #2a2520 10%, #2a2520 90%, transparent)",
-      }} />
-
-      {renderAtoms.map((atom) => (
-        <WordAtom
-          key={atom.id}
-          atom={atom}
-          prevAtom={prevLookup[atom.id]}
-          t={t}
-        />
-      ))}
-    </div>
-  );
-}
+// ─── Timing defaults (ms) ───
+const BASE_INTERVAL = 3500;
+const BASE_SMM_DURATION = 800;
+const SPEED_STEPS = [0.5, 1, 1.5, 2, 3];
 
 // ─── Magic Move Renderer ───
-function MagicMoveRenderer({ commits, currentIndex }) {
+function MagicMoveRenderer({ commits, currentIndex, animDuration = BASE_SMM_DURATION }) {
   const [highlighter, setHighlighter] = useState(null);
   const [maskUrl, setMaskUrl] = useState(null);
 
@@ -278,7 +118,7 @@ function MagicMoveRenderer({ commits, currentIndex }) {
         lang="text"
         theme="vitesse-dark"
         options={{
-          duration: 800,
+          duration: animDuration,
           stagger: 0.03,
           lineNumbers: false,
         }}
@@ -288,7 +128,7 @@ function MagicMoveRenderer({ commits, currentIndex }) {
 }
 
 // ─── Nav ───
-function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay, mode, onToggleMode }) {
+function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay, speed, onSpeedChange }) {
   const ci = currentIndex;
 
   const nav = useCallback(
@@ -307,14 +147,17 @@ function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay, m
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
         nav(ci - 1);
-      } else if (e.key === "m") {
+      } else if (e.key === "]" || e.key === "ArrowUp") {
         e.preventDefault();
-        onToggleMode?.();
+        onSpeedChange?.(1);
+      } else if (e.key === "[" || e.key === "ArrowDown") {
+        e.preventDefault();
+        onSpeedChange?.(-1);
       }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [ci, nav, onToggleMode]);
+  }, [ci, nav, onSpeedChange]);
 
   const commit = commits[ci];
 
@@ -409,19 +252,25 @@ function CommitNav({ commits, currentIndex, onNavigate, playing, onTogglePlay, m
             next &rarr;
           </button>
         </div>
-        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          <div style={{
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <button style={btn(false)} onClick={() => onSpeedChange?.(-1)}>&minus;</button>
+          <span style={{
             fontFamily: "'JetBrains Mono', monospace",
-            fontSize: "0.54rem",
-            color: "#3a3530",
+            fontSize: "0.62rem",
+            color: "#a08c6a",
+            minWidth: "32px",
+            textAlign: "center",
           }}>
-            &larr; &rarr; or spacebar &bull; press m to switch mode
-          </div>
-          {onToggleMode && (
-            <button style={btn(false)} onClick={onToggleMode}>
-              {mode === "atoms" ? "magic-move" : "atoms"}
-            </button>
-          )}
+            {speed}x
+          </span>
+          <button style={btn(false)} onClick={() => onSpeedChange?.(1)}>+</button>
+        </div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "0.54rem",
+          color: "#3a3530",
+        }}>
+          &larr; &rarr; or spacebar &bull; [ ] speed
         </div>
       </div>
     </>
@@ -433,12 +282,16 @@ export default function Playback({ docId, onBack }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [ci, setCi] = useState(0);
-  const [prevCi, setPrevCi] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [mode, setMode] = useState("magic-move");
-  const { t, go } = useAnim(1100);
-  const prevRef = useRef(0);
+  const [speedIdx, setSpeedIdx] = useState(1); // index into SPEED_STEPS, default 1x
+  const speed = SPEED_STEPS[speedIdx];
+  const interval = Math.round(BASE_INTERVAL / speed);
+  const smmDuration = Math.round(BASE_SMM_DURATION / speed);
   const ivRef = useRef(null);
+
+  const handleSpeedChange = useCallback((dir) => {
+    setSpeedIdx(i => Math.max(0, Math.min(SPEED_STEPS.length - 1, i + dir)));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/documents/${docId}/playback`)
@@ -451,8 +304,7 @@ export default function Playback({ docId, onBack }) {
           setError("no commits yet — write something first");
           return;
         }
-        const framed = buildFrames(d.commits);
-        setData(framed);
+        setData(d);
       })
       .catch(() => setError("failed to load playback data"));
   }, [docId]);
@@ -460,15 +312,9 @@ export default function Playback({ docId, onBack }) {
   const handleNavigate = useCallback((n) => {
     if (!data) return;
     setCi((p) => {
-      const next = Math.max(0, Math.min(n, data.commits.length - 1));
-      if (next !== p) { setPrevCi(p); return next; }
-      return p;
+      return Math.max(0, Math.min(n, data.commits.length - 1));
     });
   }, [data]);
-
-  useEffect(() => {
-    if (ci !== prevRef.current) { go(); prevRef.current = ci; }
-  }, [ci, go]);
 
   useEffect(() => {
     if (!data) return;
@@ -476,12 +322,12 @@ export default function Playback({ docId, onBack }) {
       ivRef.current = setInterval(() => {
         setCi(p => {
           if (p >= data.commits.length - 1) { setPlaying(false); return p; }
-          setPrevCi(p); return p + 1;
+          return p + 1;
         });
-      }, 3500);
+      }, interval);
     }
     return () => clearInterval(ivRef.current);
-  }, [playing, data]);
+  }, [playing, data, interval]);
 
   if (error) {
     return (
@@ -576,25 +422,15 @@ export default function Playback({ docId, onBack }) {
           textTransform: "uppercase",
           color: "#4a4030",
         }}>
-          {mode === "magic-move"
-            ? "git log \u2014 shiki magic move"
-            : "git log --word-diff-regex=. \u2014 atoms in revision"}
+          git log
         </span>
       </div>
 
-      {mode === "atoms" ? (
-        <AtomsRenderer
-          frames={data.frames}
-          currentIndex={ci}
-          prevIndex={prevCi}
-          t={t}
-        />
-      ) : (
-        <MagicMoveRenderer
-          commits={data.commits}
-          currentIndex={ci}
-        />
-      )}
+      <MagicMoveRenderer
+        commits={data.commits}
+        currentIndex={ci}
+        animDuration={smmDuration}
+      />
 
       <CommitNav
         commits={data.commits}
@@ -605,8 +441,8 @@ export default function Playback({ docId, onBack }) {
           if (ci >= data.commits.length - 1) handleNavigate(0);
           setPlaying(p => !p);
         }}
-        mode={mode}
-        onToggleMode={() => setMode(m => m === "atoms" ? "magic-move" : "atoms")}
+        speed={speed}
+        onSpeedChange={handleSpeedChange}
       />
     </div>
   );
