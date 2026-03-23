@@ -11,6 +11,15 @@
   --green: #4ade80;
   --red: #f87171;
   --amber: #fbbf24;
+
+  /* Rhyme group palette */
+  --rhyme-a: #7eb8da;
+  --rhyme-b: #e8836b;
+  --rhyme-c: #a78bdb;
+  --rhyme-d: #d4b85c;
+  --rhyme-e: #6bc9a8;
+  --rhyme-f: #d4789c;
+  --rhyme-g: #8baa5c;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1652,8 +1661,132 @@ input[type="range"]::-webkit-slider-thumb {
   font-style: italic;
 }
 
-/* ── Haiku status strip ── */
-.haiku-status {
+/* ── Form selector dropdown ── */
+.form-selector {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.form-selector-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.form-selector-caret {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--text-faint);
+  transition: color 0.15s;
+}
+
+.form-selector-btn:hover .form-selector-caret,
+.form-selector-btn:hover .syl-form-name {
+  color: var(--text);
+}
+
+.form-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  min-width: 200px;
+  padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.form-dropdown-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.form-dropdown-item:hover {
+  background: rgba(160, 140, 106, 0.08);
+}
+
+.form-dropdown-item.active {
+  background: rgba(160, 140, 106, 0.12);
+}
+
+.form-dropdown-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.form-dropdown-item.active .form-dropdown-name {
+  color: var(--text);
+}
+
+.form-dropdown-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+/* ── Rhyme gutter cells ── */
+.gutter-rhyme {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  min-width: 1.2em;
+  text-align: center;
+  transition: color 0.2s, opacity 0.2s;
+}
+
+.gutter-rhyme.r-pending {
+  opacity: 0.35;
+}
+
+.gutter-rhyme.r-match {
+  opacity: 1;
+}
+
+.gutter-rhyme.r-miss {
+  color: var(--red) !important;
+  opacity: 0.7;
+  text-decoration: line-through;
+}
+
+.gutter-rhyme.r-ghost {
+  opacity: 0.18;
+}
+
+/* ── Stanza boundary ── */
+.syl-gutter-row.stanza-boundary {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+/* ── Ghost rows (unwritten lines in fixed-length forms) ── */
+.syl-gutter-row.ghost-row {
+  opacity: 0.3;
+}
+
+/* ── Form status strip (generalized) ── */
+.form-status {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1666,25 +1799,39 @@ input[type="range"]::-webkit-slider-thumb {
   transition: background 0.3s;
 }
 
-.haiku-status.haiku-complete {
+.form-status.form-complete {
   background: rgba(74, 222, 128, 0.04);
 }
 
-.haiku-label {
+.form-status-label {
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.15em;
   font-size: 0.52rem;
 }
 
-.haiku-sep {
+.form-status-sep {
   color: var(--text-faint);
 }
 
+.form-status-summary {
+  color: var(--text-dim);
+  font-size: 0.58rem;
+}
+
+.form-status-summary.summary-met {
+  color: var(--green);
+}
+
+/* Syllable beats (reused from haiku, now generalized) */
 .haiku-beat {
   display: inline-flex;
   align-items: baseline;
   gap: 1px;
+}
+
+.haiku-sep {
+  color: var(--text-faint);
 }
 
 .beat-actual {
@@ -1710,6 +1857,23 @@ input[type="range"]::-webkit-slider-thumb {
   margin-left: 4px;
   color: var(--green);
   font-size: 0.7rem;
+}
+
+/* Rhyme status badges in footer */
+.form-rhyme-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  margin: 0 1px;
+}
+
+.form-rhyme-badge.r-pending {
+  color: var(--text-faint);
+}
+
+.form-rhyme-badge.r-miss {
+  color: var(--red);
+  opacity: 0.7;
 }
 
 /* ── Mode toggle button in editor header ── */

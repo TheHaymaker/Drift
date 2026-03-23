@@ -126,6 +126,25 @@ app.get("/api/auth/me", (req, res) => {
   res.json({ user_id: user.user_id, username: user.username });
 });
 
+// ─── Rhyme API (CMU dictionary) ───
+
+const CmuDict = require("./lib/CmuDict");
+
+app.get("/api/rhyme", (req, res) => {
+  const raw = req.query.words;
+  if (!raw) return res.status(400).json({ error: "words parameter required" });
+
+  const words = raw.split(",").map((w) => w.trim().toLowerCase()).filter(Boolean);
+  if (words.length === 0) return res.status(400).json({ error: "no words provided" });
+  if (words.length > 200) return res.status(400).json({ error: "too many words (max 200)" });
+
+  const result = {};
+  for (const w of words) {
+    result[w] = CmuDict.getRhymeSuffix(w);
+  }
+  res.json(result);
+});
+
 // ─── Auth middleware for document routes ───
 
 function requireAuth(req, res, next) {

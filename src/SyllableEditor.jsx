@@ -1,63 +1,237 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { analyzeText, POETRY_FORMS } from './syllabify.js';
+import { setCmuUpdateCallback } from './rhyme-client.js';
 
-// ─── Gutter cell ──────────────────────────────────────────────────────────
-function GutterCell({ value, target, isLineNum }) {
-  if (isLineNum) {
-    return <span className="gutter-linenum">{value}</span>;
-  }
+// ── Rhyme group colour palette ───────────────────────────────────────────────
+
+const RHYME_COLORS = [
+  'var(--rhyme-a)', // soft blue
+  'var(--rhyme-b)', // coral
+  'var(--rhyme-c)', // violet
+  'var(--rhyme-d)', // gold
+  'var(--rhyme-e)', // teal
+  'var(--rhyme-f)', // pink
+  'var(--rhyme-g)', // sage
+];
+
+function rhymeColor(letter) {
+  const idx = letter.charCodeAt(0) - 65; // A=0, B=1, …
+  return RHYME_COLORS[idx % RHYME_COLORS.length];
+}
+
+// ── Form keys in display order ───────────────────────────────────────────────
+
+const FORM_KEYS = Object.keys(POETRY_FORMS);
+
+// ── Gutter cells ─────────────────────────────────────────────────────────────
+
+function SylCountCell({ value, target }) {
   let cls = 'gutter-sylcount';
-  if (target !== undefined && value > 0) {
+  if (target !== undefined && target !== null && value > 0) {
     if (value === target) cls += ' g-match';
     else if (Math.abs(value - target) === 1) cls += ' g-close';
     else cls += ' g-miss';
   }
-  return <span className={cls}>{value > 0 ? value : <span className="gutter-empty">—</span>}</span>;
+  return (
+    <span className={cls}>
+      {value > 0 ? value : <span className="gutter-empty">—</span>}
+    </span>
+  );
 }
 
-// ─── Haiku status strip ───────────────────────────────────────────────────
-function HaikuStatus({ lines, pattern }) {
-  const allMet = pattern.every((t, i) => (lines[i]?.syllableCount ?? 0) === t);
+function RhymeCell({ rhymeGroup, ghost }) {
+  if (!rhymeGroup) return null;
+  const { expected, status } = rhymeGroup;
+  const color = rhymeColor(expected);
+  const cls = `gutter-rhyme r-${status}${ghost ? ' r-ghost' : ''}`;
   return (
-    <div className={`haiku-status ${allMet ? 'haiku-complete' : ''}`}>
-      <span className="haiku-label">haiku</span>
-      <span className="haiku-sep">·</span>
-      {pattern.map((target, i) => {
-        const actual = lines[i]?.syllableCount ?? 0;
-        const met = actual === target;
-        return (
-          <span key={i} className={`haiku-beat ${met ? 'beat-met' : 'beat-unmet'}`}>
-            <span className="beat-actual">{actual}</span>
-            <span className="beat-slash">/</span>
-            <span className="beat-target">{target}</span>
-            {i < pattern.length - 1 && <span className="haiku-sep"> · </span>}
-          </span>
-        );
-      })}
-      {allMet && <span className="haiku-check">✓</span>}
+    <span className={cls} style={{ color }}>
+      {expected}
+    </span>
+  );
+}
+
+// ── Stanza separator ─────────────────────────────────────────────────────────
+
+function isStanzaBoundary(lineIdx, form) {
+  if (!form?.stanzas) return false;
+  let acc = 0;
+  for (const size of form.stanzas) {
+    acc += size;
+    if (lineIdx + 1 === acc) return true;
+  }
+  return false;
+}
+
+// ── Form selector dropdown ───────────────────────────────────────────────────
+
+function FormSelector({ formKey, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const form = POETRY_FORMS[formKey];
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div className="form-selector" ref={ref}>
+      <button
+        className="form-selector-btn"
+        onClick={() => setOpen((v) => !v)}
+        onMouseDown={(e) => e.preventDefault()}
+      >
+        <span className="form-selector-caret">▾</span>
+        <span className="syl-form-name">{form.name}</span>
+      </button>
+      <span className="syl-form-desc">{form.description}</span>
+
+      {open && (
+        <div className="form-dropdown">
+          {FORM_KEYS.map((key) => (
+            <button
+              key={key}
+              className={`form-dropdown-item ${key === formKey ? 'active' : ''}`}
+              onClick={() => { onChange(key); setOpen(false); }}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <span className="form-dropdown-name">{POETRY_FORMS[key].name}</span>
+              <span className="form-dropdown-desc">{POETRY_FORMS[key].description}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── SyllableEditor ───────────────────────────────────────────────────────
+// ── FormStatus strip ─────────────────────────────────────────────────────────
+
+function FormStatus({ lines, rhymeGroups, form }) {
+  const pattern = form.pattern;
+  const scheme = form.rhymeScheme;
+  const lineCount = form.lineCount;
+
+  // Syllable progress
+  let sylMet = 0;
+  let sylTotal = 0;
+  const sylBeats = [];
+
+  if (pattern) {
+    sylTotal = pattern.length;
+    for (let i = 0; i < pattern.length; i++) {
+      const actual = lines[i]?.syllableCount ?? 0;
+      const target = pattern[i];
+      const met = actual === target;
+      if (met) sylMet++;
+      sylBeats.push({ actual, target, met });
+    }
+  }
+
+  // Rhyme progress
+  const rhymeStatus = {};
+  if (rhymeGroups) {
+    for (const rg of rhymeGroups) {
+      if (!rhymeStatus[rg.expected]) {
+        rhymeStatus[rg.expected] = 'pending';
+      }
+      if (rg.status === 'match') rhymeStatus[rg.expected] = 'match';
+      else if (rg.status === 'miss' && rhymeStatus[rg.expected] !== 'match') {
+        rhymeStatus[rg.expected] = 'miss';
+      }
+    }
+  }
+
+  // Overall completion
+  const sylComplete = !pattern || sylMet === sylTotal;
+  const rhymeComplete = !scheme || Object.values(rhymeStatus).every((s) => s === 'match');
+  const lineComplete = !lineCount || lines.filter((l) => l.syllableCount > 0).length >= lineCount;
+  const allComplete = sylComplete && rhymeComplete && lineComplete;
+
+  // Use per-line beats for short forms (≤5 lines), summary for longer
+  const useBeats = pattern && pattern.length <= 7;
+
+  return (
+    <div className={`form-status ${allComplete ? 'form-complete' : ''}`}>
+      <span className="form-status-label">{form.name}</span>
+      <span className="form-status-sep">·</span>
+
+      {/* Syllable section */}
+      {pattern && useBeats && sylBeats.map((b, i) => (
+        <span key={`s${i}`} className={`haiku-beat ${b.met ? 'beat-met' : 'beat-unmet'}`}>
+          <span className="beat-actual">{b.actual}</span>
+          <span className="beat-slash">/</span>
+          <span className="beat-target">{b.target}</span>
+          {i < sylBeats.length - 1 && <span className="haiku-sep"> · </span>}
+        </span>
+      ))}
+      {pattern && !useBeats && (
+        <span className={`form-status-summary ${sylComplete ? 'summary-met' : ''}`}>
+          {sylMet}/{sylTotal} lines
+        </span>
+      )}
+
+      {/* Rhyme section */}
+      {scheme && pattern && <span className="form-status-sep">·</span>}
+      {scheme && Object.entries(rhymeStatus).map(([letter, status]) => (
+        <span
+          key={`r${letter}`}
+          className={`form-rhyme-badge r-${status}`}
+          style={{ color: status === 'match' ? rhymeColor(letter) : undefined }}
+        >
+          {letter}{status === 'match' ? '✓' : status === 'miss' ? '✗' : '…'}
+        </span>
+      ))}
+
+      {allComplete && <span className="haiku-check">✓</span>}
+    </div>
+  );
+}
+
+// ── Main editor component ────────────────────────────────────────────────────
+
 export default function SyllableEditor({ value, onChange }) {
   const [showLineNums, setShowLineNums] = useState(true);
+  const [formKey, setFormKey] = useState('haiku');
+  const [, forceUpdate] = useState(0);
 
-  const formDef = POETRY_FORMS['haiku'];
-  const analysis = analyzeText(value);
+  const formDef = POETRY_FORMS[formKey];
+  const { lines, rhymeGroups } = analyzeText(value, formDef);
+
+  // Re-render when CMU data arrives
+  useEffect(() => {
+    setCmuUpdateCallback(() => forceUpdate((n) => n + 1));
+    return () => setCmuUpdateCallback(null);
+  }, []);
 
   const handleChange = useCallback(
     (e) => onChange(e.target.value),
     [onChange]
   );
 
+  // Determine gutter rows: actual lines + ghost rows for fixed-length forms
+  const hasRhyme = !!formDef.rhymeScheme;
+  const displayLineCount = formDef.lineCount
+    ? Math.max(lines.length, formDef.lineCount)
+    : lines.length;
+
+  // For ghost rows, build rhyme groups for unwritten lines
+  const schemeLetters = formDef.rhymeScheme === 'couplet'
+    ? null // couplets don't show ghost rows (no fixed length)
+    : Array.isArray(formDef.rhymeScheme) ? formDef.rhymeScheme : null;
+
   return (
     <div className="syl-editor">
 
       {/* ── Top mode bar ── */}
       <div className="syl-modebar">
-        <span className="syl-form-name">{formDef.name}</span>
-        <span className="syl-form-desc">{formDef.description}</span>
+        <FormSelector formKey={formKey} onChange={setFormKey} />
         <div className="syl-modebar-right">
           <button
             className={`syl-toggle-btn ${showLineNums ? 'active' : ''}`}
@@ -74,15 +248,42 @@ export default function SyllableEditor({ value, onChange }) {
 
         {/* ── Left gutter ── */}
         <div className="syl-gutter">
-          {analysis.map((lineData, li) => (
-            <div key={li} className="syl-gutter-row">
-              <GutterCell
-                value={lineData.syllableCount}
-                target={formDef.pattern[li]}
-              />
-              {showLineNums && <GutterCell value={li + 1} isLineNum />}
-            </div>
-          ))}
+          {Array.from({ length: displayLineCount }, (_, li) => {
+            const lineData = lines[li];
+            const isGhost = li >= lines.length || !lineData || lineData.syllableCount === 0;
+            const isActualLine = li < lines.length;
+            const sylCount = lineData?.syllableCount ?? 0;
+            const sylTarget = formDef.pattern?.[li];
+            const rhymeGroup = rhymeGroups?.[li]
+              ?? (isGhost && schemeLetters?.[li]
+                ? { expected: schemeLetters[li], status: 'pending', matchedWith: [] }
+                : null);
+
+            const stanzaBoundary = isStanzaBoundary(li, formDef);
+
+            return (
+              <div
+                key={li}
+                className={`syl-gutter-row${stanzaBoundary ? ' stanza-boundary' : ''}${isGhost && !isActualLine ? ' ghost-row' : ''}`}
+              >
+                {formDef.pattern && (
+                  <SylCountCell
+                    value={sylCount}
+                    target={sylTarget}
+                  />
+                )}
+                {hasRhyme && (
+                  <RhymeCell
+                    rhymeGroup={rhymeGroup}
+                    ghost={isGhost && !isActualLine}
+                  />
+                )}
+                {showLineNums && (
+                  <span className="gutter-linenum">{li + 1}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* ── Textarea ── */}
@@ -96,8 +297,8 @@ export default function SyllableEditor({ value, onChange }) {
         />
       </div>
 
-      {/* ── Haiku validation footer ── */}
-      <HaikuStatus lines={analysis} pattern={formDef.pattern} />
+      {/* ── Status footer ── */}
+      <FormStatus lines={lines} rhymeGroups={rhymeGroups} form={formDef} />
     </div>
   );
 }

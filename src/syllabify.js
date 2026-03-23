@@ -1,4 +1,5 @@
 import { syllable } from 'syllable';
+import { getRhymeKey, wordsRhyme, lastWordOf, prefetchRhymes } from './rhyme-client.js';
 
 const VOWELS = 'aeiouy';
 const isVowel = (c) => VOWELS.includes(c.toLowerCase());
@@ -97,23 +98,148 @@ function tokenizeLine(line) {
     });
 }
 
+// ── Rhyme scheme evaluation ──────────────────────────────────────────────────
+
 /**
- * Analyze a full poem string into per-line data.
- * Returns an array of { tokens, syllableCount } — one entry per line.
+ * For a couplet scheme, dynamically assign rhyme groups: AA BB CC …
  */
-export function analyzeText(text) {
-  return text.split('\n').map((line) => {
-    const tokens = tokenizeLine(line);
-    const syllableCount = tokens.reduce((s, t) => s + (t.count ?? 0), 0);
-    return { tokens, syllableCount };
-  });
+function coupletScheme(lineCount) {
+  const letters = [];
+  let code = 0;
+  for (let i = 0; i < lineCount; i++) {
+    letters.push(String.fromCharCode(65 + code)); // 'A', 'B', …
+    if (i % 2 === 1) code++;
+  }
+  return letters;
 }
 
-/** Built-in poetry forms. Extend as needed. */
+/**
+ * Evaluate how the poem's actual rhymes compare to the expected scheme.
+ *
+ * @param {Array} lines — per-line analysis objects (need lastWord, rhymeKey)
+ * @param {string[]|string} scheme — rhyme scheme array or 'couplet'
+ * @returns {Array<{ expected: string, status: string, matchedWith: number[] }>}
+ */
+export function evaluateRhymeScheme(lines, scheme) {
+  const letters = scheme === 'couplet'
+    ? coupletScheme(lines.length)
+    : scheme;
+
+  const result = [];
+
+  for (let i = 0; i < letters.length; i++) {
+    const expected = letters[i];
+    const lineData = lines[i];
+    const lastWord = lineData?.lastWord;
+
+    if (!lastWord || !lineData) {
+      result.push({ expected, status: 'pending', matchedWith: [] });
+      continue;
+    }
+
+    // Find all other lines with the same expected group that have content
+    const sameGroup = [];
+    for (let j = 0; j < letters.length; j++) {
+      if (j === i || letters[j] !== expected) continue;
+      if (lines[j]?.lastWord) sameGroup.push(j);
+    }
+
+    if (sameGroup.length === 0) {
+      // Only one line in this group written so far — pending
+      result.push({ expected, status: 'pending', matchedWith: [] });
+      continue;
+    }
+
+    // Check if this line rhymes with any other in the same group
+    const matchedWith = [];
+    for (const j of sameGroup) {
+      if (wordsRhyme(lastWord, lines[j].lastWord)) {
+        matchedWith.push(j);
+      }
+    }
+
+    const status = matchedWith.length > 0 ? 'match' : 'miss';
+    result.push({ expected, status, matchedWith });
+  }
+
+  return result;
+}
+
+// ── Main analysis function ───────────────────────────────────────────────────
+
+/**
+ * Analyze a full poem string into per-line data with optional rhyme evaluation.
+ *
+ * @param {string} text — the full poem text
+ * @param {object} [form] — a POETRY_FORMS entry (optional)
+ * @returns {{ lines: Array, rhymeGroups: Array|null }}
+ */
+export function analyzeText(text, form) {
+  const lines = text.split('\n').map((line) => {
+    const tokens = tokenizeLine(line);
+    const syllableCount = tokens.reduce((s, t) => s + (t.count ?? 0), 0);
+    const lastWord = lastWordOf(line);
+    const rhymeKey = lastWord ? getRhymeKey(lastWord) : null;
+    return { tokens, syllableCount, lastWord, rhymeKey };
+  });
+
+  // Trigger async CMU prefetch for all last words
+  const wordsToFetch = lines.map((l) => l.lastWord).filter(Boolean);
+  if (wordsToFetch.length > 0) prefetchRhymes(wordsToFetch);
+
+  // Evaluate rhyme scheme if the form defines one
+  const rhymeGroups = form?.rhymeScheme
+    ? evaluateRhymeScheme(lines, form.rhymeScheme)
+    : null;
+
+  return { lines, rhymeGroups };
+}
+
+// ── Poetry forms registry ────────────────────────────────────────────────────
+
+/** Built-in poetry forms. */
 export const POETRY_FORMS = {
   haiku: {
     name: 'Haiku',
     description: '5 — 7 — 5',
     pattern: [5, 7, 5],
+    rhymeScheme: null,
+    lineCount: 3,
+  },
+  tanka: {
+    name: 'Tanka',
+    description: '5 — 7 — 5 — 7 — 7',
+    pattern: [5, 7, 5, 7, 7],
+    rhymeScheme: null,
+    lineCount: 5,
+  },
+  limerick: {
+    name: 'Limerick',
+    description: 'AABBA · 8–8–5–5–8',
+    pattern: [8, 8, 5, 5, 8],
+    rhymeScheme: ['A', 'A', 'B', 'B', 'A'],
+    lineCount: 5,
+  },
+  sonnet: {
+    name: 'Sonnet',
+    description: 'ABAB CDCD EFEF GG · 14 lines',
+    pattern: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    rhymeScheme: ['A','B','A','B', 'C','D','C','D', 'E','F','E','F', 'G','G'],
+    lineCount: 14,
+    stanzas: [4, 4, 4, 2],
+  },
+  couplet: {
+    name: 'Couplet',
+    description: 'AA BB CC… · rhyming pairs',
+    pattern: null,
+    rhymeScheme: 'couplet',
+    lineCount: null,
+  },
+  freeVerse: {
+    name: 'Free Verse',
+    description: 'no constraints',
+    pattern: null,
+    rhymeScheme: null,
+    lineCount: null,
   },
 };
