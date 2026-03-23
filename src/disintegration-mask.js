@@ -1,19 +1,18 @@
 /**
  * Generates a pixel-disintegration sprite sheet as a data URL.
  *
- * The sprite sheet is a single row of 64 frames (1×64 layout).
- * Frame 0 = fully visible (all pixels opaque), frame 63 = fully hidden (all transparent).
+ * The sprite sheet is a single row of 24 frames (1×24 layout).
+ * Frame 0 = fully visible (all pixels opaque), frame 23 = fully hidden (all transparent).
  * Each pixel is assigned a random threshold; frames progressively turn
  * pixels transparent based on that threshold.
  *
  * Uses the ALPHA channel for masking (CSS mask-mode defaults to alpha).
- * Used with mask-size: 6400% 100% and a single-axis mask-position
- * transition with steps(63).
+ * Used with mask-size: 2400% 100% and @keyframes animation with steps(23).
  */
 
 let cached = null;
 
-export const MASK_FRAMES = 64;
+export const MASK_FRAMES = 24;
 
 export function generateDisintegrationMask(cellSize = 128) {
   if (cached) return cached;
