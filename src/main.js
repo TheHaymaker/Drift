@@ -618,6 +618,11 @@ newPoemBtn.addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: finalTitle, filename }),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.error || "failed to create poem");
+      return;
+    }
     const data = await res.json();
     navigate("#/write/" + data.docId);
   } catch (e) {

@@ -71,6 +71,7 @@ async function migrateLegacyRepo() {
 const app = express();
 const server = http.createServer(app);
 
+app.set("trust proxy", 1); // trust Fly.io reverse proxy for secure cookies
 app.use(express.json());
 app.use(sessionMiddleware);
 
@@ -394,7 +395,8 @@ wss.on("connection", (ws, req) => {
   let userId = null;
 
   // Parse session from upgrade request cookie
-  sessionMiddleware(req, {}, () => {
+  const dummyRes = Object.create(http.ServerResponse.prototype);
+  sessionMiddleware(req, dummyRes, () => {
     if (req.session && req.session.userId) {
       userId = req.session.userId;
     }
