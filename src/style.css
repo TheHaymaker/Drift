@@ -1691,6 +1691,22 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--text);
 }
 
+.form-info-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  transition: color 0.15s;
+  line-height: 1;
+}
+
+.form-info-btn:hover,
+.form-info-btn.active {
+  color: var(--accent);
+}
+
 .form-dropdown {
   position: absolute;
   top: calc(100% + 6px);
@@ -1699,9 +1715,68 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--bg-raised);
   border: 1px solid var(--border);
   border-radius: 3px;
-  min-width: 200px;
-  padding: 4px 0;
+  min-width: 280px;
+  max-width: 360px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.form-dropdown-search-wrap {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-dropdown-search {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 4px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  outline: none;
+}
+
+.form-dropdown-search:focus {
+  border-color: var(--accent);
+}
+
+.form-dropdown-search::placeholder {
+  color: var(--text-faint);
+}
+
+.form-dropdown-list {
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.form-dropdown-category-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 10px 14px 4px;
+  user-select: none;
+}
+
+.form-dropdown-category + .form-dropdown-category .form-dropdown-category-label {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 12px;
+}
+
+.form-dropdown-empty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--text-faint);
+  padding: 12px 14px;
+  text-align: center;
+  font-style: italic;
 }
 
 .form-dropdown-item {
@@ -1771,6 +1846,108 @@ input[type="range"]::-webkit-slider-thumb {
 
 .gutter-rhyme.r-ghost {
   opacity: 0.18;
+}
+
+/* ── Body wrap (editor + info panel) ── */
+.syl-body-wrap {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.syl-body-wrap .syl-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Form info panel ── */
+.form-info-panel {
+  width: 280px;
+  min-width: 280px;
+  border-left: 1px solid var(--border);
+  padding: 12px 14px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.form-info-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.form-info-name {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.form-info-origin {
+  font-size: 0.45rem;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.form-info-summary {
+  color: var(--text);
+  margin: 0 0 10px;
+  font-size: 0.5rem;
+  line-height: 1.7;
+}
+
+.form-info-section {
+  margin-bottom: 10px;
+}
+
+.form-info-section-label {
+  font-size: 0.42rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 3px;
+}
+
+.form-info-section p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.form-info-list {
+  margin: 0;
+  padding-left: 14px;
+  list-style: '· ';
+}
+
+.form-info-list li {
+  margin-bottom: 3px;
+  line-height: 1.6;
+}
+
+.form-info-poets {
+  color: var(--accent);
+  margin: 0;
+}
+
+.form-info-example {
+  font-style: italic;
+  color: var(--text);
+  margin: 0;
+}
+
+.form-info-validation {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.42rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 /* ── Stanza boundary ── */
