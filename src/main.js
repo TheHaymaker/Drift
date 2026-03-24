@@ -167,6 +167,7 @@ let commitLog = [];
 // ─── Syllable Editor ───
 let syllableEditorRoot = null;
 let sylModeActive = false;
+let currentFormKey = 'haiku';
 
 function mountSyllableEditor() {
   if (!syllableEditorRoot) {
@@ -191,7 +192,19 @@ function mountSyllableEditor() {
       editor.dispatchEvent(new Event("input", { bubbles: true }));
     }, []);
 
-    return createElement(SyllableEditor, { value: text, onChange: handleChange });
+    const handleFormKeyChange = useCallback((key) => {
+      currentFormKey = key;
+      if (currentDocId) {
+        localStorage.setItem("drift-form:" + currentDocId, key);
+      }
+    }, []);
+
+    return createElement(SyllableEditor, {
+      value: text,
+      onChange: handleChange,
+      initialFormKey: currentFormKey,
+      onFormKeyChange: handleFormKeyChange,
+    });
   }
 
   syllableEditorRoot.render(createElement(SyllableEditorWrapper));
@@ -700,6 +713,7 @@ backBtn.addEventListener("click", () => navigate("#/"));
 function showEditor(docId, readOnly) {
   if (currentDocId === docId && ws && ws.readyState === 1) return;
   currentDocId = docId;
+  currentFormKey = localStorage.getItem("drift-form:" + docId) || 'haiku';
   landingView.classList.add("hidden");
   dashboardView.classList.add("hidden");
   editorView.classList.remove("hidden");

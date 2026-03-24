@@ -340,9 +340,9 @@ function FormStatus({ lines, rhymeGroups, form }) {
 
 // ── Main editor component ────────────────────────────────────────────────────
 
-export default function SyllableEditor({ value, onChange }) {
+export default function SyllableEditor({ value, onChange, initialFormKey, onFormKeyChange }) {
   const [showLineNums, setShowLineNums] = useState(true);
-  const [formKey, setFormKey] = useState('haiku');
+  const [formKey, setFormKey] = useState(initialFormKey || 'haiku');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [, forceUpdate] = useState(0);
 
@@ -378,7 +378,7 @@ export default function SyllableEditor({ value, onChange }) {
       <div className="syl-modebar">
         <FormSelector
           formKey={formKey}
-          onChange={setFormKey}
+          onChange={(key) => { setFormKey(key); onFormKeyChange?.(key); }}
           showInfo={showInfoPanel}
           onInfoToggle={() => setShowInfoPanel((v) => !v)}
         />
