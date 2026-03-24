@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { analyzeText, POETRY_FORMS } from './syllabify.js';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { analyzeText, POETRY_FORMS, FORM_CATEGORIES } from './syllabify.js';
 import { setCmuUpdateCallback } from './rhyme-client.js';
 
 // ── Rhyme group colour palette ───────────────────────────────────────────────
@@ -19,9 +19,21 @@ function rhymeColor(letter) {
   return RHYME_COLORS[idx % RHYME_COLORS.length];
 }
 
-// ── Form keys in display order ───────────────────────────────────────────────
+// ── Build categorized form list ─────────────────────────────────────────────
 
-const FORM_KEYS = Object.keys(POETRY_FORMS);
+const ALL_FORM_KEYS = Object.keys(POETRY_FORMS);
+
+/** Group form keys by category, in FORM_CATEGORIES order. */
+function buildCategorizedForms() {
+  const grouped = [];
+  for (const cat of FORM_CATEGORIES) {
+    const keys = ALL_FORM_KEYS.filter((k) => POETRY_FORMS[k].category === cat.key);
+    if (keys.length > 0) grouped.push({ ...cat, keys });
+  }
+  return grouped;
+}
+
+const CATEGORIZED_FORMS = buildCategorizedForms();
 
 // ── Gutter cells ─────────────────────────────────────────────────────────────
 
@@ -63,11 +75,13 @@ function isStanzaBoundary(lineIdx, form) {
   return false;
 }
 
-// ── Form selector dropdown ───────────────────────────────────────────────────
+// ── Form selector dropdown (categorized + searchable) ───────────────────────
 
-function FormSelector({ formKey, onChange }) {
+function FormSelector({ formKey, onChange, onInfoToggle, showInfo }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const ref = useRef(null);
+  const searchRef = useRef(null);
   const form = POETRY_FORMS[formKey];
 
   // Close on outside click
@@ -80,6 +94,33 @@ function FormSelector({ formKey, onChange }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  // Focus search when opened
+  useEffect(() => {
+    if (open && searchRef.current) searchRef.current.focus();
+  }, [open]);
+
+  // Reset search when closed
+  useEffect(() => {
+    if (!open) setSearch('');
+  }, [open]);
+
+  // Filter forms by search
+  const filteredCategories = useMemo(() => {
+    if (!search.trim()) return CATEGORIZED_FORMS;
+    const q = search.toLowerCase();
+    return CATEGORIZED_FORMS
+      .map((cat) => ({
+        ...cat,
+        keys: cat.keys.filter((k) => {
+          const f = POETRY_FORMS[k];
+          return f.name.toLowerCase().includes(q)
+            || f.description.toLowerCase().includes(q)
+            || (f.origin && f.origin.toLowerCase().includes(q));
+        }),
+      }))
+      .filter((cat) => cat.keys.length > 0);
+  }, [search]);
+
   return (
     <div className="form-selector" ref={ref}>
       <button
@@ -91,20 +132,123 @@ function FormSelector({ formKey, onChange }) {
         <span className="syl-form-name">{form.name}</span>
       </button>
       <span className="syl-form-desc">{form.description}</span>
+      <button
+        className={`form-info-btn ${showInfo ? 'active' : ''}`}
+        onClick={onInfoToggle}
+        onMouseDown={(e) => e.preventDefault()}
+        title="Form info"
+      >
+        &#9432;
+      </button>
 
       {open && (
         <div className="form-dropdown">
-          {FORM_KEYS.map((key) => (
-            <button
-              key={key}
-              className={`form-dropdown-item ${key === formKey ? 'active' : ''}`}
-              onClick={() => { onChange(key); setOpen(false); }}
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <span className="form-dropdown-name">{POETRY_FORMS[key].name}</span>
-              <span className="form-dropdown-desc">{POETRY_FORMS[key].description}</span>
-            </button>
-          ))}
+          <div className="form-dropdown-search-wrap">
+            <input
+              ref={searchRef}
+              className="form-dropdown-search"
+              type="text"
+              placeholder="search forms…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="form-dropdown-list">
+            {filteredCategories.map((cat) => (
+              <div key={cat.key} className="form-dropdown-category">
+                <div className="form-dropdown-category-label">{cat.label}</div>
+                {cat.keys.map((key) => (
+                  <button
+                    key={key}
+                    className={`form-dropdown-item ${key === formKey ? 'active' : ''}`}
+                    onClick={() => { onChange(key); setOpen(false); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <span className="form-dropdown-name">{POETRY_FORMS[key].name}</span>
+                    <span className="form-dropdown-desc">{POETRY_FORMS[key].description}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+            {filteredCategories.length === 0 && (
+              <div className="form-dropdown-empty">no matches</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Form info panel ─────────────────────────────────────────────────────────
+
+function FormInfoPanel({ formKey }) {
+  const form = POETRY_FORMS[formKey];
+  if (!form) return null;
+
+  return (
+    <div className="form-info-panel">
+      <div className="form-info-header">
+        <span className="form-info-name">{form.name}</span>
+        {form.origin && <span className="form-info-origin">{form.origin}</span>}
+      </div>
+
+      {form.summary && (
+        <p className="form-info-summary">{form.summary}</p>
+      )}
+
+      {form.history && (
+        <div className="form-info-section">
+          <div className="form-info-section-label">History</div>
+          <p>{form.history}</p>
+        </div>
+      )}
+
+      {form.ethos && (
+        <div className="form-info-section">
+          <div className="form-info-section-label">Ethos</div>
+          <p>{form.ethos}</p>
+        </div>
+      )}
+
+      {form.constraints && form.constraints.length > 0 && (
+        <div className="form-info-section">
+          <div className="form-info-section-label">Constraints</div>
+          <ul className="form-info-list">
+            {form.constraints.map((c, i) => <li key={i}>{c}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {form.tips && form.tips.length > 0 && (
+        <div className="form-info-section">
+          <div className="form-info-section-label">Tips</div>
+          <ul className="form-info-list">
+            {form.tips.map((t, i) => <li key={i}>{t}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {form.notablePoets && form.notablePoets.length > 0 && (
+        <div className="form-info-section">
+          <div className="form-info-section-label">Notable Poets</div>
+          <p className="form-info-poets">{form.notablePoets.join(', ')}</p>
+        </div>
+      )}
+
+      {form.exampleTitle && (
+        <div className="form-info-section">
+          <div className="form-info-section-label">Notable Example</div>
+          <p className="form-info-example">{form.exampleTitle}</p>
+        </div>
+      )}
+
+      {form.validationLevel && (
+        <div className="form-info-validation">
+          {form.validationLevel === 'full' ? 'Full validation' :
+           form.validationLevel === 'partial' ? 'Partial validation' :
+           'Display only — no structural validation'}
         </div>
       )}
     </div>
@@ -199,6 +343,7 @@ function FormStatus({ lines, rhymeGroups, form }) {
 export default function SyllableEditor({ value, onChange }) {
   const [showLineNums, setShowLineNums] = useState(true);
   const [formKey, setFormKey] = useState('haiku');
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [, forceUpdate] = useState(0);
 
   const formDef = POETRY_FORMS[formKey];
@@ -231,7 +376,12 @@ export default function SyllableEditor({ value, onChange }) {
 
       {/* ── Top mode bar ── */}
       <div className="syl-modebar">
-        <FormSelector formKey={formKey} onChange={setFormKey} />
+        <FormSelector
+          formKey={formKey}
+          onChange={setFormKey}
+          showInfo={showInfoPanel}
+          onInfoToggle={() => setShowInfoPanel((v) => !v)}
+        />
         <div className="syl-modebar-right">
           <button
             className={`syl-toggle-btn ${showLineNums ? 'active' : ''}`}
@@ -243,58 +393,63 @@ export default function SyllableEditor({ value, onChange }) {
         </div>
       </div>
 
-      {/* ── Editor body: gutter + textarea ── */}
-      <div className="syl-body">
+      {/* ── Editor body + optional info panel ── */}
+      <div className={`syl-body-wrap${showInfoPanel ? ' with-info' : ''}`}>
+        <div className="syl-body">
 
-        {/* ── Left gutter ── */}
-        <div className="syl-gutter">
-          {Array.from({ length: displayLineCount }, (_, li) => {
-            const lineData = lines[li];
-            const isGhost = li >= lines.length || !lineData || lineData.syllableCount === 0;
-            const isActualLine = li < lines.length;
-            const sylCount = lineData?.syllableCount ?? 0;
-            const sylTarget = formDef.pattern?.[li];
-            const rhymeGroup = rhymeGroups?.[li]
-              ?? (isGhost && schemeLetters?.[li]
-                ? { expected: schemeLetters[li], status: 'pending', matchedWith: [] }
-                : null);
+          {/* ── Left gutter ── */}
+          <div className="syl-gutter">
+            {Array.from({ length: displayLineCount }, (_, li) => {
+              const lineData = lines[li];
+              const isGhost = li >= lines.length || !lineData || lineData.syllableCount === 0;
+              const isActualLine = li < lines.length;
+              const sylCount = lineData?.syllableCount ?? 0;
+              const sylTarget = formDef.pattern?.[li];
+              const rhymeGroup = rhymeGroups?.[li]
+                ?? (isGhost && schemeLetters?.[li]
+                  ? { expected: schemeLetters[li], status: 'pending', matchedWith: [] }
+                  : null);
 
-            const stanzaBoundary = isStanzaBoundary(li, formDef);
+              const stanzaBoundary = isStanzaBoundary(li, formDef);
 
-            return (
-              <div
-                key={li}
-                className={`syl-gutter-row${stanzaBoundary ? ' stanza-boundary' : ''}${isGhost && !isActualLine ? ' ghost-row' : ''}`}
-              >
-                {formDef.pattern && (
-                  <SylCountCell
-                    value={sylCount}
-                    target={sylTarget}
-                  />
-                )}
-                {hasRhyme && (
-                  <RhymeCell
-                    rhymeGroup={rhymeGroup}
-                    ghost={isGhost && !isActualLine}
-                  />
-                )}
-                {showLineNums && (
-                  <span className="gutter-linenum">{li + 1}</span>
-                )}
-              </div>
-            );
-          })}
+              return (
+                <div
+                  key={li}
+                  className={`syl-gutter-row${stanzaBoundary ? ' stanza-boundary' : ''}${isGhost && !isActualLine ? ' ghost-row' : ''}`}
+                >
+                  {formDef.pattern && (
+                    <SylCountCell
+                      value={sylCount}
+                      target={sylTarget}
+                    />
+                  )}
+                  {hasRhyme && (
+                    <RhymeCell
+                      rhymeGroup={rhymeGroup}
+                      ghost={isGhost && !isActualLine}
+                    />
+                  )}
+                  {showLineNums && (
+                    <span className="gutter-linenum">{li + 1}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Textarea ── */}
+          <textarea
+            className="syl-textarea"
+            value={value}
+            onChange={handleChange}
+            spellCheck={false}
+            autoFocus
+            placeholder="begin writing..."
+          />
         </div>
 
-        {/* ── Textarea ── */}
-        <textarea
-          className="syl-textarea"
-          value={value}
-          onChange={handleChange}
-          spellCheck={false}
-          autoFocus
-          placeholder="begin writing..."
-        />
+        {/* ── Info panel ── */}
+        {showInfoPanel && <FormInfoPanel formKey={formKey} />}
       </div>
 
       {/* ── Status footer ── */}
