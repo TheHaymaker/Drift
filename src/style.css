@@ -1853,6 +1853,7 @@ input[type="range"]::-webkit-slider-thumb {
   display: flex;
   flex: 1;
   min-height: 0;
+  position: relative;
 }
 
 .syl-body-wrap .syl-body {
@@ -1862,6 +1863,10 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* ── Form info panel ── */
 .form-info-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
   width: 280px;
   min-width: 280px;
   border-left: 1px solid var(--border);
@@ -1871,6 +1876,7 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 0.5rem;
   line-height: 1.6;
   color: var(--text-dim);
+  background: var(--bg);
 }
 
 .form-info-header {
