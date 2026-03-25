@@ -1,8 +1,12 @@
 // src/views/dashboard.js
 import { state } from '../state.js';
-import { navigate } from '../router.js';
 import { showToast } from '../toast.js';
 import { dashboardSubtitle } from '../auth.js';
+
+// Lazy imports to avoid circular dep: router → dashboard → router
+let _navigate = (hash) => { location.hash = hash; };
+import('../router.js').then(m => { _navigate = m.navigate; });
+function navigate(hash) { _navigate(hash); }
 
 // Lazy import to avoid circular dep: router → dashboard → editor → router
 let _disconnectWs = () => {};
