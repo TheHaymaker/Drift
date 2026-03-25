@@ -1,0 +1,163 @@
+// src/preferences.js
+import { state } from './state.js';
+
+export const FONT_MAP = {
+  'garamond': "'EB Garamond', Georgia, serif",
+  'lora': "'Lora', Georgia, serif",
+  'plex-mono': "'IBM Plex Mono', 'JetBrains Mono', monospace",
+};
+
+export function applyTheme(pref) {
+  document.documentElement.setAttribute('data-theme', pref);
+  localStorage.setItem('drift-theme', pref);
+}
+
+export function applyFont(key) {
+  const family = FONT_MAP[key] || FONT_MAP['garamond'];
+  document.documentElement.style.setProperty('--font-body', family);
+  localStorage.setItem('drift-font-family', key);
+}
+
+export function applyEditorFontSize(rem) {
+  document.documentElement.style.setProperty('--font-editor-size', rem + 'rem');
+  localStorage.setItem('drift-editor-font-size', rem);
+}
+
+export function applyPlaybackFontSize(rem) {
+  document.documentElement.style.setProperty('--font-playback-size', rem + 'rem');
+  localStorage.setItem('drift-playback-font-size', rem);
+}
+
+export function initPreferences() {
+  // Theme
+  const theme = localStorage.getItem('drift-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+
+  // Font family
+  const fontKey = localStorage.getItem('drift-font-family') || 'garamond';
+  const family = FONT_MAP[fontKey] || FONT_MAP['garamond'];
+  document.documentElement.style.setProperty('--font-body', family);
+
+  // Font sizes
+  const editorSize = localStorage.getItem('drift-editor-font-size') || '1.45';
+  document.documentElement.style.setProperty('--font-editor-size', editorSize + 'rem');
+
+  const playbackSize = localStorage.getItem('drift-playback-font-size') || '1.45';
+  document.documentElement.style.setProperty('--font-playback-size', playbackSize + 'rem');
+}
+
+export function populateSettings() {
+  // Theme
+  const theme = localStorage.getItem('drift-theme') || 'dark';
+  setActiveSegmented('themePicker', theme);
+
+  // Font
+  const font = localStorage.getItem('drift-font-family') || 'garamond';
+  setActiveFont('fontPicker', font);
+
+  // Editor font size
+  const editorSize = localStorage.getItem('drift-editor-font-size') || '1.45';
+  const editorSlider = document.getElementById('settingsEditorSizeSlider');
+  const editorLabel = document.getElementById('settingsEditorSizeValue');
+  editorSlider.value = editorSize;
+  editorLabel.textContent = editorSize + 'rem';
+
+  // Playback font size
+  const playbackSize = localStorage.getItem('drift-playback-font-size') || '1.45';
+  const playbackSlider = document.getElementById('settingsPlaybackSizeSlider');
+  const playbackLabel = document.getElementById('settingsPlaybackSizeValue');
+  playbackSlider.value = playbackSize;
+  playbackLabel.textContent = playbackSize + 'rem';
+
+  // Threshold
+  const threshold = localStorage.getItem('drift-default-threshold') || '3000';
+  const threshSlider = document.getElementById('settingsThresholdSlider');
+  const threshLabel = document.getElementById('settingsThresholdValue');
+  threshSlider.value = threshold;
+  threshLabel.textContent = (parseInt(threshold) / 1000).toFixed(1) + 's';
+
+  // Speed
+  const speedIdx = localStorage.getItem('drift-default-speed') || '1';
+  setActiveSegmented('speedPicker', speedIdx);
+}
+
+export function setActiveSegmented(pickerId, value) {
+  const picker = document.getElementById(pickerId);
+  if (!picker) return;
+  for (const btn of picker.children) {
+    btn.classList.toggle('active', btn.dataset.value === String(value));
+  }
+}
+
+export function setActiveFont(pickerId, value) {
+  const picker = document.getElementById(pickerId);
+  if (!picker) return;
+  for (const btn of picker.children) {
+    btn.classList.toggle('active', btn.dataset.value === String(value));
+  }
+}
+
+export function showSettings() {
+  const { disconnectWs } = _editorModule();
+  disconnectWs();
+  state.currentDocId = null;
+  document.getElementById("landingView").classList.add("hidden");
+  document.getElementById("dashboardView").classList.add("hidden");
+  document.getElementById("editorView").classList.add("hidden");
+  document.getElementById("settingsView").classList.remove("hidden");
+  document.getElementById("connStatus").classList.add("hidden");
+  document.getElementById("playbackView").classList.add("hidden");
+  document.title = "drift \u2014 settings";
+  populateSettings();
+}
+
+// Lazy import to avoid circular deps
+let _editorModuleCache = null;
+function _editorModule() {
+  if (!_editorModuleCache) {
+    // dynamic require pattern — modules are already loaded by this point
+    _editorModuleCache = { disconnectWs: () => {} };
+    import('./views/editor.js').then(m => { _editorModuleCache = m; });
+  }
+  return _editorModuleCache;
+}
+
+// Settings event listeners
+document.getElementById('themePicker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-value]');
+  if (!btn) return;
+  applyTheme(btn.dataset.value);
+  setActiveSegmented('themePicker', btn.dataset.value);
+});
+
+document.getElementById('fontPicker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-value]');
+  if (!btn) return;
+  applyFont(btn.dataset.value);
+  setActiveFont('fontPicker', btn.dataset.value);
+});
+
+document.getElementById('settingsEditorSizeSlider')?.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value).toFixed(2);
+  document.getElementById('settingsEditorSizeValue').textContent = val + 'rem';
+  applyEditorFontSize(val);
+});
+
+document.getElementById('settingsPlaybackSizeSlider')?.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value).toFixed(2);
+  document.getElementById('settingsPlaybackSizeValue').textContent = val + 'rem';
+  applyPlaybackFontSize(val);
+});
+
+document.getElementById('settingsThresholdSlider')?.addEventListener('input', (e) => {
+  const val = parseInt(e.target.value);
+  document.getElementById('settingsThresholdValue').textContent = (val / 1000).toFixed(1) + 's';
+  localStorage.setItem('drift-default-threshold', val);
+});
+
+document.getElementById('speedPicker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-value]');
+  if (!btn) return;
+  localStorage.setItem('drift-default-speed', btn.dataset.value);
+  setActiveSegmented('speedPicker', btn.dataset.value);
+});
