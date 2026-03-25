@@ -341,7 +341,7 @@ function FormStatus({ lines, rhymeGroups, form }) {
 
 // ── Main editor component ────────────────────────────────────────────────────
 
-export default function SyllableEditor({ value, htmlContent, onChange, onHtmlChange, initialFormKey, onFormKeyChange }) {
+export default function SyllableEditor({ value, htmlContent, onChange, onHtmlChange, initialFormKey, onFormKeyChange, editable = true }) {
   const [showLineNums, setShowLineNums] = useState(true);
   const [formKey, setFormKey] = useState(initialFormKey || 'haiku');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
@@ -448,6 +448,7 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
             onUpdate={handleEditorUpdate}
             placeholder="begin writing..."
             autoFocus
+            editable={editable}
           />
         </div>
 
