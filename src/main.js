@@ -232,6 +232,11 @@ let commitLog = [];
 // ─── History navigation state ───
 let historyPosition = -1; // -1 = at HEAD (normal editing), 0..N = viewing that commit index
 
+function setEditorEditable(editable) {
+  editor.readOnly = !editable;
+  editor.dispatchEvent(new CustomEvent("_syl-editable", { detail: editable }));
+}
+
 // ─── Squash mode state ───
 let squashMode = false;
 let squashStart = null; // commit index
@@ -260,6 +265,7 @@ function mountSyllableEditor() {
   function SyllableEditorWrapper() {
     const [text, setText] = useState(editor.value);
     const [html, setHtml] = useState(currentHtml || contentToHtml(editor.value));
+    const [editable, setEditable] = useState(!editor.readOnly);
 
     // Keep in sync when the textarea is updated externally (e.g. commit history
     // click, WS init) by listening to a custom event dispatched by setEditorContent().
@@ -270,6 +276,12 @@ function mountSyllableEditor() {
       };
       editor.addEventListener("_syl-sync", sync);
       return () => editor.removeEventListener("_syl-sync", sync);
+    }, []);
+
+    useEffect(() => {
+      const onEditable = (e) => setEditable(e.detail);
+      editor.addEventListener("_syl-editable", onEditable);
+      return () => editor.removeEventListener("_syl-editable", onEditable);
     }, []);
 
     const handleChange = useCallback((newText) => {
@@ -296,6 +308,7 @@ function mountSyllableEditor() {
       onHtmlChange: handleHtmlChange,
       initialFormKey: currentFormKey,
       onFormKeyChange: handleFormKeyChange,
+      editable,
     });
   }
 
@@ -316,11 +329,18 @@ function mountStandaloneEditor() {
   }
   function StandaloneWrapper() {
     const [html, setHtml] = useState(currentHtml || contentToHtml(editor.value));
+    const [editable, setEditable] = useState(!editor.readOnly);
 
     useEffect(() => {
       const sync = () => setHtml(currentHtml || contentToHtml(editor.value));
       editor.addEventListener("_syl-sync", sync);
       return () => editor.removeEventListener("_syl-sync", sync);
+    }, []);
+
+    useEffect(() => {
+      const onEditable = (e) => setEditable(e.detail);
+      editor.addEventListener("_syl-editable", onEditable);
+      return () => editor.removeEventListener("_syl-editable", onEditable);
     }, []);
 
     const handleUpdate = useCallback((newHtml, plainText) => {
@@ -334,6 +354,7 @@ function mountStandaloneEditor() {
       onUpdate: handleUpdate,
       placeholder: "begin writing. drift commits when you pause.",
       autoFocus: true,
+      editable,
     });
   }
   standaloneEditorRoot.render(createElement(StandaloneWrapper));
@@ -1297,8 +1318,10 @@ function updateNavUI() {
     if (items[domIndex]) items[domIndex].classList.add("viewing");
     navBannerText.textContent = "viewing snapshot #" + (historyPosition + 1) + " of " + commitLog.length;
     navBanner.classList.remove("hidden");
+    setEditorEditable(false);
   } else {
     navBanner.classList.add("hidden");
+    setEditorEditable(true);
   }
 }
 
