@@ -1586,14 +1586,14 @@ input[type="range"]::-webkit-slider-thumb {
   transition: stroke-dashoffset 0.1s linear;
 }
 
-.demo-ring-label {
+.demo-ring-label { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.54rem;
   color: var(--text-faint);
   letter-spacing: 0.06em;
 }
 
-.demo-hint {
+.demo-hint { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.54rem;
   color: var(--amber);
@@ -1601,7 +1601,7 @@ input[type="range"]::-webkit-slider-thumb {
   transition: opacity 0.4s ease;
 }
 
-.demo-playback-btn {
+.demo-playback-btn { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem;
   letter-spacing: 0.06em;
@@ -1626,7 +1626,7 @@ input[type="range"]::-webkit-slider-thumb {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.demo-toast {
+.demo-toast { /* DEMO ONLY */
   position: absolute;
   bottom: 60px;
   left: 50%;
