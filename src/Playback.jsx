@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { createHighlighter } from "shiki";
-import { ShikiMagicMove } from "shiki-magic-move/react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { ShikiMagicMovePrecompiled } from "shiki-magic-move/react";
 import "shiki-magic-move/style.css";
 import { generateDisintegrationMask } from "./disintegration-mask.js";
+import { htmlToKeyedTokens } from "./htmlTokenizer.js";
 
 // ─── Timing defaults (ms) ───
 const BASE_INTERVAL = 3500;
@@ -11,43 +11,17 @@ const SPEED_STEPS = [0.5, 1, 1.5, 2, 3];
 
 // ─── Magic Move Renderer ───
 function MagicMoveRenderer({ commits, currentIndex, animDuration = BASE_SMM_DURATION }) {
-  const [highlighter, setHighlighter] = useState(null);
   const [maskUrl, setMaskUrl] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    createHighlighter({
-      themes: ["vitesse-dark"],
-      langs: ["text"],
-    }).then((hl) => {
-      if (!cancelled) setHighlighter(hl);
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     setMaskUrl(generateDisintegrationMask());
   }, []);
 
-  if (!highlighter) {
-    return (
-      <div style={{
-        width: "100%",
-        maxWidth: "580px",
-        minHeight: "200px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'JetBrains Mono', monospace",
-        fontSize: "0.68rem",
-        color: "#4a4030",
-      }}>
-        loading highlighter&hellip;
-      </div>
-    );
-  }
-
-  const code = commits[currentIndex].lines.join("\n");
+  // Pre-compute keyed token steps from HTML (or plain text fallback)
+  const steps = useMemo(
+    () => commits.map((c) => htmlToKeyedTokens(c.html || c.lines.join("\n"))),
+    [commits]
+  );
 
   return (
     <div className="magic-move-wrapper" style={{
@@ -112,11 +86,10 @@ function MagicMoveRenderer({ commits, currentIndex, animDuration = BASE_SMM_DURA
           animation: smm-disintegrate var(--smm-duration, .8s) steps(23) forwards !important;
         }
       `}</style>
-      <ShikiMagicMove
-        highlighter={highlighter}
-        code={code}
-        lang="text"
-        theme="vitesse-dark"
+      <ShikiMagicMovePrecompiled
+        steps={steps}
+        step={currentIndex}
+        animate={true}
         options={{
           duration: animDuration,
           stagger: 0.03,
