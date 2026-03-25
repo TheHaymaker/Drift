@@ -301,13 +301,16 @@ app.get("/api/documents/:docId/playback", requireAuth, async (req, res) => {
       const raw = await GitOps.getFileAt(doc.repoPath, c.hash, doc.filename);
       // Strip HTML tags for playback (content may be rich text HTML)
       const plain = raw
+        // Remove Tiptap/ProseMirror trailing breaks inside paragraphs
+        .replace(/<br\s*(?:class="[^"]*")?\s*\/?>\s*<\/p>/gi, '</p>')
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/?p[^>]*>/gi, '')
         .replace(/<[^>]*>/g, '')
         .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&nbsp;/g, ' ')
-        .replace(/\n$/, '');
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/^\n+|\n+$/g, '');
       const lines = plain.split("\n");
       if (lines[lines.length - 1] === "") lines.pop();
       commits.push({
@@ -407,6 +410,36 @@ app.post("/api/documents/:docId/sync/push", requireAuth, async (req, res) => {
   } catch (e) {
     console.error("  sync/push failed:", e.message);
     res.status(500).json({ error: "push failed" });
+  }
+});
+
+// ─── Sync: Full history rewrite (after squash/reorder) ───
+app.post("/api/documents/:docId/sync/rewrite", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
+  if (!doc) return res.status(404).json({ error: "not found" });
+  try {
+    const { commits } = req.body;
+    if (!Array.isArray(commits)) {
+      return res.status(400).json({ error: "commits must be an array" });
+    }
+
+    // Remove the existing repo directory and recreate from scratch
+    const repoDir = doc.repoPath;
+    const fs = await import("fs/promises");
+    try { await fs.rm(repoDir, { recursive: true, force: true }); } catch {}
+
+    await GitOps.ensureRepo(repoDir, doc.filename);
+    for (const c of commits) {
+      await GitOps.writeFile(repoDir, doc.filename, c.content);
+      await GitOps.commitFile(repoDir, doc.filename, c.message);
+    }
+
+    DocumentStore.touchLastModified(doc.doc_id);
+    const log = await GitOps.getLog(repoDir, doc.filename);
+    res.json({ ok: true, count: log.length });
+  } catch (e) {
+    console.error("  sync/rewrite failed:", e.message);
+    res.status(500).json({ error: "rewrite failed" });
   }
 });
 

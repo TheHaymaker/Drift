@@ -41,9 +41,11 @@ const author = { name: "drift", email: "drift@poem" };
 function stripHtml(html) {
   if (!html) return '';
   return html
+    // Remove Tiptap/ProseMirror trailing breaks inside paragraphs
+    .replace(/<br\s*(?:class="[^"]*")?\s*\/?>\s*<\/p>/gi, '</p>')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/?p[^>]*>/gi, '')
     .replace(/<[^>]*>/g, '')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -51,7 +53,8 @@ function stripHtml(html) {
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
     .replace(/&nbsp;/g, ' ')
-    .replace(/\n$/, '');
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^\n+|\n+$/g, '');
 }
 
 // ─── Commit message generation (ported from Session.js:116-169) ───
@@ -476,6 +479,176 @@ async function handleSetThreshold({ docId, value }) {
   return { ok: true, value: doc.pauseThreshold };
 }
 
+// ─── Revert to a specific commit ───
+
+async function handleRevertTo({ docId, filename, hash, commitIndex }) {
+  const doc = getDoc(docId);
+  if (!doc) throw new Error(`doc ${docId} not initialized`);
+  clearTimeout(doc.pauseTimer);
+  const { fs: lfs, dir } = doc;
+
+  // Read the content at the target commit
+  const snap = await handleGetFileAt({ docId, filename, hash });
+  const content = snap.content;
+
+  // Write the reverted content
+  await lfs.promises.writeFile(`${dir}/${filename}`, content);
+  await git.add({ fs: lfs, dir, filepath: filename });
+
+  // Check if there's actually a change from current HEAD
+  const matrix = await git.statusMatrix({ fs: lfs, dir });
+  const hasChanges = matrix.some(
+    ([, head, workdir, stage]) => head !== stage || head !== workdir
+  );
+  if (!hasChanges) {
+    return { noChange: true };
+  }
+
+  const message = `revert to #${commitIndex + 1} (${hash})`;
+  const newOid = await git.commit({ fs: lfs, dir, message, author });
+  doc.lastContent = content;
+
+  const log = await getLogInternal(lfs, dir, docId);
+  return {
+    hash: newOid.slice(0, 7),
+    message,
+    content,
+    log,
+  };
+}
+
+// ─── Squash commits (history rewrite) ───
+
+async function handleSquash({ docId, filename, fromIndex, toIndex }) {
+  const doc = getDoc(docId);
+  if (!doc) throw new Error(`doc ${docId} not initialized`);
+  clearTimeout(doc.pauseTimer);
+  const { fs: lfs, dir } = doc;
+
+  // 1. Read full log and content at each commit
+  const commits = await git.log({ fs: lfs, dir });
+  const chronological = [...commits].reverse();
+  const snapshots = [];
+  for (const c of chronological) {
+    let content = "";
+    try {
+      const { blob } = await git.readBlob({
+        fs: lfs, dir, oid: c.oid, filepath: filename,
+      });
+      content = new TextDecoder().decode(blob);
+    } catch {}
+    snapshots.push({
+      message: c.commit.message.trim(),
+      date: c.commit.author.timestamp,
+      content,
+    });
+  }
+
+  // 2. Build new commit plan: collapse fromIndex..toIndex into one
+  const newPlan = [];
+  for (let i = 0; i < snapshots.length; i++) {
+    if (i === fromIndex) {
+      // Squashed commit: use content from toIndex, combine messages
+      const msgs = [];
+      for (let j = fromIndex; j <= toIndex; j++) {
+        msgs.push(snapshots[j].message);
+      }
+      newPlan.push({
+        message: "squash #" + (fromIndex + 1) + "\u2013#" + (toIndex + 1) + ": " + msgs.join("; "),
+        date: snapshots[toIndex].date,
+        content: snapshots[toIndex].content,
+      });
+    } else if (i > fromIndex && i <= toIndex) {
+      // Skip — these are squashed into fromIndex
+      continue;
+    } else {
+      newPlan.push(snapshots[i]);
+    }
+  }
+
+  // 3. Wipe and rebuild the repo
+  const fsName = `drift-${docId}`;
+  const newFs = new LightningFS(fsName, { wipe: true });
+  doc.fs = newFs;
+
+  try { await newFs.promises.mkdir(dir, { recursive: true }); } catch {}
+  await git.init({ fs: newFs, dir, defaultBranch: "main" });
+
+  for (const c of newPlan) {
+    await newFs.promises.writeFile(`${dir}/${filename}`, c.content);
+    await git.add({ fs: newFs, dir, filepath: filename });
+    await git.commit({
+      fs: newFs, dir,
+      message: c.message,
+      author: { ...author, timestamp: c.date },
+    });
+  }
+
+  doc.lastContent = newPlan[newPlan.length - 1].content;
+  const log = await getLogInternal(newFs, dir, docId);
+  return {
+    log,
+    content: doc.lastContent,
+  };
+}
+
+// ─── Reorder commits (history rewrite) ───
+
+async function handleReorder({ docId, filename, newOrder }) {
+  const doc = getDoc(docId);
+  if (!doc) throw new Error(`doc ${docId} not initialized`);
+  clearTimeout(doc.pauseTimer);
+  const { fs: lfs, dir } = doc;
+
+  // 1. Read all commits and their content, indexed by short hash
+  const commits = await git.log({ fs: lfs, dir });
+  const byHash = {};
+  for (const c of commits) {
+    const shortHash = c.oid.slice(0, 7);
+    let content = "";
+    try {
+      const { blob } = await git.readBlob({
+        fs: lfs, dir, oid: c.oid, filepath: filename,
+      });
+      content = new TextDecoder().decode(blob);
+    } catch {}
+    byHash[shortHash] = {
+      message: c.commit.message.trim(),
+      date: c.commit.author.timestamp,
+      content,
+    };
+  }
+
+  // 2. Build new commit plan in the requested order
+  const newPlan = newOrder.map(hash => byHash[hash]).filter(Boolean);
+  if (newPlan.length === 0) throw new Error("reorder: no valid commits");
+
+  // 3. Wipe and rebuild
+  const fsName = `drift-${docId}`;
+  const newFs = new LightningFS(fsName, { wipe: true });
+  doc.fs = newFs;
+
+  try { await newFs.promises.mkdir(dir, { recursive: true }); } catch {}
+  await git.init({ fs: newFs, dir, defaultBranch: "main" });
+
+  for (const c of newPlan) {
+    await newFs.promises.writeFile(`${dir}/${filename}`, c.content);
+    await git.add({ fs: newFs, dir, filepath: filename });
+    await git.commit({
+      fs: newFs, dir,
+      message: c.message,
+      author: { ...author, timestamp: c.date },
+    });
+  }
+
+  doc.lastContent = newPlan[newPlan.length - 1].content;
+  const log = await getLogInternal(newFs, dir, docId);
+  return {
+    log,
+    content: doc.lastContent,
+  };
+}
+
 // ─── Message handler ───
 
 const handlers = {
@@ -489,6 +662,9 @@ const handlers = {
   getStructuredDiff: handleGetStructuredDiff,
   clone: handleClone,
   setThreshold: handleSetThreshold,
+  revertTo: handleRevertTo,
+  squash: handleSquash,
+  reorder: handleReorder,
 };
 
 self.onmessage = async (e) => {

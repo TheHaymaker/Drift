@@ -217,8 +217,21 @@
       <span id="commitCountNum">0</span>
       snapshots
     </div>
+    <div class="nav-mode-banner hidden" id="navBanner">
+      <span id="navBannerText">viewing snapshot</span>
+      <button class="nav-banner-close" id="navBannerClose">&times;</button>
+    </div>
+    <div class="history-nav">
+      <button class="btn btn-icon" id="undoBtn" title="Previous snapshot (Ctrl+Z)">&#8617;</button>
+      <button class="btn btn-icon" id="redoBtn" title="Next snapshot (Ctrl+Shift+Z)">&#8618;</button>
+    </div>
     <div class="commits" id="commitList"></div>
 
+    <div class="squash-confirm-bar hidden" id="squashConfirmBar">
+      <span id="squashConfirmText">Squash commits?</span>
+      <button class="btn btn-sm" id="squashConfirmBtn">confirm</button>
+      <button class="btn btn-sm" id="squashCancelBtn">cancel</button>
+    </div>
     <div class="settings">
       <div class="setting-row">
         <span class="setting-label">pause threshold</span>
@@ -226,6 +239,7 @@
       </div>
       <input type="range" id="thresholdSlider" min="500" max="15000" step="250" value="3000">
       <button class="btn" id="forceCommitBtn">commit now</button>
+      <button class="btn" id="squashBtn" style="margin-top: 4px;">squash</button>
       <button class="btn" id="playbackBtn" style="margin-top: 4px;">&#9654; play back</button>
       <button class="btn" id="exportBtn" style="margin-top: 4px;">export history</button>
     </div>

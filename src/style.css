@@ -524,6 +524,172 @@ textarea::selection {
   margin-top: 2px;
 }
 
+/* ─── History Navigation ─── */
+
+.history-nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.btn-icon {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 1rem;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.btn-icon:hover {
+  background: rgba(160, 140, 106, 0.08);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.btn-icon:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.btn-icon:disabled:hover {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.nav-mode-banner {
+  background: rgba(160, 140, 106, 0.12);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.nav-banner-close {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.commit-item.viewing {
+  background: rgba(160, 140, 106, 0.15);
+  border-left-color: var(--amber);
+}
+
+/* ─── Revert Button ─── */
+
+.commit-revert-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-faint);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  padding: 2px 6px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+
+.commit-item:hover .commit-revert-btn {
+  display: inline-block;
+}
+
+.commit-revert-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Squash Mode ─── */
+
+.commit-item.squash-selected {
+  background: rgba(251, 191, 36, 0.12);
+  border-left-color: var(--amber);
+}
+
+.commit-item.squash-range {
+  background: rgba(251, 191, 36, 0.06);
+  border-left-color: rgba(251, 191, 36, 0.3);
+}
+
+.squash-confirm-bar {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--amber);
+}
+
+.squash-confirm-bar .btn-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.squash-confirm-bar .btn-sm:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+#squashConfirmText {
+  flex: 1;
+}
+
+/* ─── Drag-and-Drop Reorder ─── */
+
+.commit-item[draggable="true"] {
+  cursor: grab;
+}
+
+.commit-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.commit-item.dragging {
+  opacity: 0.4;
+}
+
+.commit-item.drag-over-top {
+  border-top: 2px solid var(--accent);
+  padding-top: 6px;
+}
+
+.commit-item.drag-over-bottom {
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 6px;
+}
+
 .settings {
   margin-top: 20px;
   padding-top: 16px;

@@ -144,6 +144,39 @@ export function createSyncClient(docId, filename, gitClient) {
       }
     },
 
+    /**
+     * Full sync after history rewrite (squash, reorder).
+     * Sends the entire rebuilt history to the server's rewrite endpoint.
+     */
+    async fullSync() {
+      if (destroyed) return;
+      try {
+        syncStatus = "pushing";
+        const logResult = await gitClient.getLog({ docId });
+        const commits = [];
+        for (const c of logResult.log) {
+          const snap = await gitClient.getFileAt({ docId, filename, hash: c.hash });
+          commits.push({
+            hash: c.hash,
+            message: c.message,
+            date: c.date || new Date().toISOString(),
+            content: snap.content,
+          });
+        }
+        const res = await fetch(`/api/documents/${docId}/sync/rewrite`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ commits }),
+        });
+        if (!res.ok) throw new Error(`rewrite sync failed: ${res.status}`);
+        syncStatus = "synced";
+        pushQueue = []; // Clear any pending pushes since we just sent everything
+      } catch (err) {
+        console.error("[sync] fullSync failed:", err);
+        syncStatus = "error";
+      }
+    },
+
     getStatus() {
       return {
         syncStatus,

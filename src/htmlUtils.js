@@ -15,17 +15,27 @@ export function isHtml(content) {
 export function stripHtml(html) {
   if (!html) return '';
   return html
+    // Remove Tiptap/ProseMirror trailing breaks inside paragraphs (empty line markers)
+    .replace(/<br\s*(?:class="[^"]*")?\s*\/?>\s*<\/p>/gi, '</p>')
+    // Soft line breaks (shift+enter) within a paragraph
     .replace(/<br\s*\/?>/gi, '\n')
+    // Paragraph boundaries → single newline
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
+    // Opening/closing p tags → nothing (not extra newlines)
+    .replace(/<\/?p[^>]*>/gi, '')
+    // Strip all remaining HTML tags
     .replace(/<[^>]*>/g, '')
+    // Decode common entities
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
     .replace(/&nbsp;/g, ' ')
-    .replace(/\n$/, '');
+    // Collapse 3+ consecutive newlines into 2 (preserve intentional blank lines)
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim leading/trailing newlines
+    .replace(/^\n+|\n+$/g, '');
 }
 
 /**
