@@ -90,6 +90,9 @@ export function createGitClient() {
     reorder(params) {
       return send("reorder", params);
     },
+    deleteCommits(params) {
+      return send("deleteCommits", params);
+    },
     onCommit(callback) {
       commitListeners.push(callback);
       return () => {

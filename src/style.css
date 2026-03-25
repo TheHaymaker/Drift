@@ -648,10 +648,20 @@ textarea::selection {
   border-left-color: var(--amber);
 }
 
-/* ─── Revert Button ─── */
+/* ─── Commit Action Buttons ─── */
 
-.commit-revert-btn {
+.commit-actions {
   display: none;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.commit-item:hover .commit-actions {
+  display: flex;
+}
+
+.commit-revert-btn,
+.commit-delete-btn {
   background: none;
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -660,13 +670,8 @@ textarea::selection {
   font-size: 0.5rem;
   padding: 2px 6px;
   cursor: pointer;
-  margin-top: 4px;
   transition: all 0.2s;
   letter-spacing: 0.04em;
-}
-
-.commit-item:hover .commit-revert-btn {
-  display: inline-block;
 }
 
 .commit-revert-btn:hover {
@@ -674,19 +679,21 @@ textarea::selection {
   color: var(--accent);
 }
 
-/* ─── Squash Mode ─── */
+.commit-delete-btn:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
 
-.commit-item.squash-selected {
+/* ─── Commit Selection ─── */
+
+.commit-item.selected {
   background: rgba(251, 191, 36, 0.12);
   border-left-color: var(--amber);
 }
 
-.commit-item.squash-range {
-  background: rgba(251, 191, 36, 0.06);
-  border-left-color: rgba(251, 191, 36, 0.3);
-}
+/* ─── Selection Action Bar ─── */
 
-.squash-confirm-bar {
+.selection-action-bar {
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);
   border-radius: 4px;
@@ -700,7 +707,7 @@ textarea::selection {
   color: var(--amber);
 }
 
-.squash-confirm-bar .btn-sm {
+.selection-action-bar .btn-sm {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.5rem;
   padding: 3px 8px;
@@ -712,13 +719,115 @@ textarea::selection {
   transition: all 0.2s;
 }
 
-.squash-confirm-bar .btn-sm:hover {
+.selection-action-bar .btn-sm:hover {
   border-color: var(--accent);
   color: var(--text);
 }
 
-#squashConfirmText {
+.selection-action-bar .btn-sm:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.selection-action-bar .btn-sm:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+#selectionCountText {
   flex: 1;
+}
+
+/* ─── Commit Modals ─── */
+
+.commit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.commit-modal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  max-width: 360px;
+  width: 90%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text);
+}
+
+.commit-modal p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.commit-modal-message {
+  color: var(--text-dim);
+  font-style: italic;
+  word-break: break-word;
+}
+
+.commit-modal-warning {
+  color: #ef4444;
+}
+
+.commit-modal-help-toggle {
+  color: var(--text-faint);
+  font-size: 0.55rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.commit-modal-help-text {
+  color: var(--text-faint);
+  font-size: 0.55rem;
+  line-height: 1.6;
+  margin-top: 6px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.commit-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+.commit-modal-actions .btn-sm {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  padding: 4px 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.commit-modal-actions .btn-sm:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.btn-danger {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
 }
 
 /* ─── Drag-and-Drop Reorder ─── */
