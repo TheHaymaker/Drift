@@ -1279,6 +1279,7 @@ commitList.addEventListener("drop", async (e) => {
 function renderCommits(log, newHash) {
   commitLog = log;
   commitCountNum.textContent = log.length;
+  if (miniCommitCount) miniCommitCount.textContent = log.length + " snapshots";
 
   // Incremental update: prepend only the new commit (skip when selecting)
   if (newHash && commitList.children.length > 0 && selectedCommits.size === 0) {
@@ -1298,6 +1299,25 @@ function renderCommits(log, newHash) {
   commitList.innerHTML = "";
   commitList.appendChild(fragment);
 }
+
+// ── Sidebar collapse/expand ──
+const sidebarToggle = document.getElementById("sidebarToggle");
+const miniCommitCount = document.getElementById("miniCommitCount");
+const sidebar = document.querySelector(".sidebar");
+const editorView = document.getElementById("editorView");
+
+if (localStorage.getItem("sidebarCollapsed") === "true") {
+  sidebar.classList.add("collapsed");
+  editorView.classList.add("sidebar-collapsed");
+  sidebarToggle.innerHTML = "&#9654;";
+}
+
+sidebarToggle.addEventListener("click", () => {
+  const collapsed = sidebar.classList.toggle("collapsed");
+  editorView.classList.toggle("sidebar-collapsed", collapsed);
+  sidebarToggle.innerHTML = collapsed ? "&#9654;" : "&#9664;";
+  localStorage.setItem("sidebarCollapsed", collapsed);
+});
 
 // Keyboard shortcuts
 document.addEventListener("keydown", (e) => {

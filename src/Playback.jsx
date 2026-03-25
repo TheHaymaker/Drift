@@ -277,7 +277,7 @@ export default function Playback({ docId, onBack, initialData }) {
         <span className="playback-label">
           git log
         </span>
-        <a href="#/settings" className="settings-gear playback-settings-gear" title="settings">&#9881;</a>
+        <a href="#/settings" className="settings-gear playback-settings-gear" title="settings">&#9881; settings</a>
       </div>
 
       <MagicMoveRenderer
