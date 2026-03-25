@@ -22,7 +22,7 @@ export function createGitClient() {
     // Unsolicited event from pause timer
     if (msgId === undefined && data.type === "committed") {
       for (const cb of commitListeners) {
-        try { cb(data); } catch {}
+        try { cb(data); } catch(err) { console.error('[git-client] commit listener error:', err); }
       }
       return;
     }
@@ -45,7 +45,16 @@ export function createGitClient() {
   function send(type, payload) {
     const msgId = nextId++;
     return new Promise((resolve, reject) => {
-      pending.set(msgId, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (pending.has(msgId)) {
+          pending.delete(msgId);
+          reject(new Error(`[git-client] timeout: ${type} after 30s (msgId=${msgId})`));
+        }
+      }, 30_000);
+      pending.set(msgId, {
+        resolve(data) { clearTimeout(timer); resolve(data); },
+        reject(err)   { clearTimeout(timer); reject(err); },
+      });
       worker.postMessage({ msgId, type, ...payload });
     });
   }
@@ -95,6 +104,9 @@ export function createGitClient() {
     },
     onCommit(callback) {
       commitListeners.push(callback);
+      if (commitListeners.length > 10) {
+        console.warn('[git-client] commitListeners has', commitListeners.length, 'entries — possible leak');
+      }
       return () => {
         const idx = commitListeners.indexOf(callback);
         if (idx >= 0) commitListeners.splice(idx, 1);
