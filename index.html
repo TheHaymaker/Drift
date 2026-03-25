@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -165,6 +165,7 @@
   <div class="dashboard-header">
     <a class="dashboard-title dashboard-home-link" id="dashboardHomeBtn" href="#/">drift</a>
     <div class="dashboard-subtitle" id="dashboardSubtitle">your poems</div>
+    <a class="settings-gear" href="#/settings" title="settings">&#9881;</a>
     <button class="auth-toggle logout-btn" id="logoutBtn">log out</button>
   </div>
   <button class="new-poem-btn" id="newPoemBtn">+ new poem</button>
@@ -228,8 +229,78 @@
       <button class="btn" id="forceCommitBtn">commit now</button>
       <button class="btn" id="playbackBtn" style="margin-top: 4px;">&#9654; play back</button>
       <button class="btn" id="exportBtn" style="margin-top: 4px;">export history</button>
+      <a class="settings-gear" href="#/settings" title="settings">&#9881; settings</a>
     </div>
   </div>
+</div>
+
+<!-- ─── Settings View ─── -->
+<div class="settings-view hidden" id="settingsView">
+  <div class="dashboard-header">
+    <a class="dashboard-title dashboard-home-link" href="#/poems">drift</a>
+    <div class="dashboard-subtitle">settings</div>
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-row">
+      <span class="setting-label">theme</span>
+    </div>
+    <div class="segmented-group" id="themePicker">
+      <button class="segmented-btn active" data-value="dark">dark</button>
+      <button class="segmented-btn" data-value="light">light</button>
+      <button class="segmented-btn" data-value="system">system</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-row">
+      <span class="setting-label">font</span>
+    </div>
+    <div class="segmented-group" id="fontPicker">
+      <button class="font-btn active" data-value="garamond" style="font-family: 'EB Garamond', Georgia, serif">EB Garamond</button>
+      <button class="font-btn" data-value="lora" style="font-family: 'Lora', Georgia, serif">Lora</button>
+      <button class="font-btn" data-value="plex-mono" style="font-family: 'IBM Plex Mono', monospace">IBM Plex Mono</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-row">
+      <span class="setting-label">editor font size</span>
+      <span class="setting-value" id="settingsEditorSizeValue">1.45rem</span>
+    </div>
+    <input type="range" id="settingsEditorSizeSlider" min="0.9" max="2.2" step="0.05" value="1.45">
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-row">
+      <span class="setting-label">playback font size</span>
+      <span class="setting-value" id="settingsPlaybackSizeValue">1.45rem</span>
+    </div>
+    <input type="range" id="settingsPlaybackSizeSlider" min="0.9" max="2.2" step="0.05" value="1.45">
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-row">
+      <span class="setting-label">default snapshot cadence</span>
+      <span class="setting-value" id="settingsThresholdValue">3.0s</span>
+    </div>
+    <input type="range" id="settingsThresholdSlider" min="500" max="15000" step="250" value="3000">
+  </div>
+
+  <div class="settings-section">
+    <div class="setting-row">
+      <span class="setting-label">default playback speed</span>
+    </div>
+    <div class="segmented-group" id="speedPicker">
+      <button class="segmented-btn" data-value="0">0.5x</button>
+      <button class="segmented-btn active" data-value="1">1x</button>
+      <button class="segmented-btn" data-value="2">1.5x</button>
+      <button class="segmented-btn" data-value="3">2x</button>
+      <button class="segmented-btn" data-value="4">3x</button>
+    </div>
+  </div>
+
+  <a href="#/poems" class="settings-back">&larr; back to poems</a>
 </div>
 
 <div class="connection hidden" id="connStatus">

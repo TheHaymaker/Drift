@@ -8,7 +8,9 @@
 import { toKeyedTokens } from 'shiki-magic-move/core';
 import { isHtml, stripHtml } from './htmlUtils.js';
 
-const DEFAULT_COLOR = '#d4c5a9';
+function getDefaultColor() {
+  return getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#d4c5a9';
+}
 
 // ── Style helpers ────────────────────────────────────────────────────────────
 
@@ -47,7 +49,7 @@ function walkNode(node, style, tokens, offsetRef) {
       tokens.push({
         content: text,
         offset: offsetRef.value,
-        color: DEFAULT_COLOR,
+        color: getDefaultColor(),
         ...(style ? { htmlStyle: style } : {}),
       });
       offsetRef.value += text.length;
@@ -82,7 +84,7 @@ export function htmlToTokenLines(html) {
       const token = {
         content: line,
         offset,
-        color: DEFAULT_COLOR,
+        color: getDefaultColor(),
       };
       offset += line.length + 1; // +1 for the newline
       return [token];
@@ -128,7 +130,7 @@ export function htmlToKeyedTokens(html) {
   return {
     ...keyed,
     bg: 'transparent',
-    fg: DEFAULT_COLOR,
+    fg: getDefaultColor(),
     rootStyle: '',
     themeName: 'drift',
   };
