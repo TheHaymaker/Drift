@@ -1,6 +1,13 @@
 // src/auth.js
 import { state } from './state.js';
-import { navigate, route } from './router.js';
+
+// Lazy imports to avoid circular dep with router.js
+let _navigate = (hash) => { location.hash = hash; };
+let _route = () => {};
+import('./router.js').then(m => {
+  _navigate = m.navigate;
+  _route = m.route;
+});
 
 const authView = document.getElementById("authView");
 const authForm = document.getElementById("authForm");
@@ -70,7 +77,7 @@ authForm.addEventListener("submit", async (e) => {
     } else {
       location.hash = "#/poems";
     }
-    route();
+    _route();
   } catch {
     authError.textContent = "connection failed";
   }
@@ -80,5 +87,5 @@ logoutBtn.addEventListener("click", async () => {
   await fetch("/api/auth/logout", { method: "POST" });
   state.currentUser = null;
   location.hash = "#/";
-  route();
+  _route();
 });

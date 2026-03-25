@@ -97,8 +97,8 @@ export function setActiveFont(pickerId, value) {
   }
 }
 
-export function showSettings() {
-  const { disconnectWs } = _editorModule();
+export async function showSettings() {
+  const { disconnectWs } = await import('./views/editor.js');
   disconnectWs();
   state.currentDocId = null;
   document.getElementById("landingView").classList.add("hidden");
@@ -109,17 +109,6 @@ export function showSettings() {
   document.getElementById("playbackView").classList.add("hidden");
   document.title = "drift \u2014 settings";
   populateSettings();
-}
-
-// Lazy import to avoid circular deps
-let _editorModuleCache = null;
-function _editorModule() {
-  if (!_editorModuleCache) {
-    // dynamic require pattern — modules are already loaded by this point
-    _editorModuleCache = { disconnectWs: () => {} };
-    import('./views/editor.js').then(m => { _editorModuleCache = m; });
-  }
-  return _editorModuleCache;
 }
 
 // Settings event listeners

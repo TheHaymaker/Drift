@@ -5,8 +5,8 @@ import { showAuth } from '../auth.js';
 
 export { destroyDemo };
 
-export function showLanding() {
-  const { disconnectWs } = _editorModule();
+export async function showLanding() {
+  const { disconnectWs } = await import('./editor.js');
   disconnectWs();
   state.currentDocId = null;
   document.getElementById("landingView").classList.remove("hidden");
@@ -38,16 +38,6 @@ export function handleStartWritingClick(e) {
     showAuth();
   }
   // If logged in, default href="#/poems" navigates normally
-}
-
-// Lazy import to avoid circular deps
-let _editorModuleCache = null;
-function _editorModule() {
-  if (!_editorModuleCache) {
-    _editorModuleCache = { disconnectWs: () => {} };
-    import('./editor.js').then(m => { _editorModuleCache = m; });
-  }
-  return _editorModuleCache;
 }
 
 // Landing auth-aware links event listeners
