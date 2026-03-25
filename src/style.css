@@ -1,4 +1,29 @@
+/*
+ * style.css — Drift design system
+ *
+ * SECTIONS:
+ *  1. Design Tokens
+ *  2. Reset & Base
+ *  3. App Shell & Layout
+ *  4. Landing Page
+ *  5. Dashboard
+ *  6. Editor
+ *  7. Pause Ring & Commit Indicator
+ *  8. Commit List & History Navigation
+ *  9. Syllable Editor
+ * 10. Playback
+ * 11. Modals & Overlays
+ * 12. Settings
+ * 13. Dark / Light Theme Overrides
+ * 14. Responsive & Print
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@300;400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+/* ==========================================================================
+   1. DESIGN TOKENS
+   CSS custom properties: colors, fonts, spacing, animation durations
+   ========================================================================== */
 
 :root {
   --bg: #141210;
@@ -77,6 +102,11 @@
   }
 }
 
+/* ==========================================================================
+   2. RESET & BASE
+   Normalize, box-sizing, body defaults
+   ========================================================================== */
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -86,6 +116,11 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
+
+/* ==========================================================================
+   3. APP SHELL & LAYOUT
+   Top-level layout: app container, view transitions, main panels
+   ========================================================================== */
 
 /* ─── Auth ─── */
 
@@ -146,6 +181,11 @@ body {
 }
 
 .dashboard-header { position: relative; }
+
+/* ==========================================================================
+   5. DASHBOARD
+   Document list, new-poem button, doc item cards
+   ========================================================================== */
 
 /* ─── Dashboard ─── */
 
@@ -315,7 +355,7 @@ body {
   padding: 20px 0;
 }
 
-/* ─── Editor ─── */
+/* ─── Editor app grid ─── */
 
 .app {
   display: grid;
@@ -332,6 +372,11 @@ body {
   .app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
 }
+
+/* ==========================================================================
+   6. EDITOR
+   Prose area, toolbar, content editable, focus states
+   ========================================================================== */
 
 .editor-pane {
   display: flex;
@@ -447,6 +492,11 @@ textarea::selection {
   background: linear-gradient(to bottom, transparent, var(--border) 10%, var(--border) 90%, transparent);
 }
 
+/* ==========================================================================
+   7. PAUSE RING & COMMIT INDICATOR
+   SVG pause ring animation, typing/paused states
+   ========================================================================== */
+
 .pause-ring {
   position: fixed;
   bottom: 32px;
@@ -489,6 +539,11 @@ textarea::selection {
   color: var(--text-faint);
   letter-spacing: 0.06em;
 }
+
+/* ==========================================================================
+   8. COMMIT LIST & HISTORY NAVIGATION
+   Commit items, timestamps, selection states, drag-drop reorder
+   ========================================================================== */
 
 .sidebar {
   background: var(--bg-raised);
@@ -723,6 +778,11 @@ textarea::selection {
 #selectionCountText {
   flex: 1;
 }
+
+/* ==========================================================================
+  11. MODALS & OVERLAYS
+   Confirmation dialogs, dropdowns, tooltips
+   ========================================================================== */
 
 /* ─── Commit Modals ─── */
 
@@ -1051,6 +1111,11 @@ input[type="range"]::-webkit-slider-thumb {
 
 .hidden { display: none !important; }
 
+/* ==========================================================================
+   4. LANDING PAGE
+   Hero section, demo animation, feature list
+   ========================================================================== */
+
 /* ─── Landing Page ─── */
 
 .landing {
@@ -1317,7 +1382,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin-bottom: 48px;
 }
 
-.demo-editor {
+.demo-editor { /* DEMO ONLY */
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
@@ -1325,7 +1390,7 @@ input[type="range"]::-webkit-slider-thumb {
   position: relative;
 }
 
-.demo-playback-overlay {
+.demo-playback-overlay { /* DEMO ONLY */
   position: absolute;
   inset: 0;
   z-index: 10;
@@ -1340,7 +1405,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: transparent !important;
 }
 
-.demo-header {
+.demo-header { /* DEMO ONLY */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1349,14 +1414,14 @@ input[type="range"]::-webkit-slider-thumb {
   border-bottom: 1px solid var(--border);
 }
 
-.demo-filename {
+.demo-filename { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.56rem;
   letter-spacing: 0.1em;
   color: var(--text-dim);
 }
 
-.demo-body {
+.demo-body { /* DEMO ONLY */
   display: grid;
   grid-template-columns: 1fr 180px;
   min-height: 240px;
@@ -1388,14 +1453,14 @@ input[type="range"]::-webkit-slider-thumb {
   background: rgba(160, 140, 106, 0.2);
 }
 
-.demo-sidebar {
+.demo-sidebar { /* DEMO ONLY */
   padding: 16px;
   background: var(--bg-raised);
   display: flex;
   flex-direction: column;
 }
 
-.demo-sidebar-title {
+.demo-sidebar-title { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.52rem;
   letter-spacing: 0.18em;
@@ -1404,7 +1469,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin-bottom: 12px;
 }
 
-.demo-commit-count {
+.demo-commit-count { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
   color: var(--accent);
@@ -1420,7 +1485,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin-bottom: 2px;
 }
 
-.demo-commits {
+.demo-commits { /* DEMO ONLY */
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -1429,7 +1494,7 @@ input[type="range"]::-webkit-slider-thumb {
   max-height: 180px;
 }
 
-.demo-commit-item {
+.demo-commit-item { /* DEMO ONLY */
   padding: 6px 8px;
   border-radius: 4px;
   border-left: 2px solid transparent;
@@ -1445,14 +1510,14 @@ input[type="range"]::-webkit-slider-thumb {
   animation: slideIn 0.4s ease;
 }
 
-.demo-commit-hash {
+.demo-commit-hash { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
   color: var(--accent);
   letter-spacing: 0.04em;
 }
 
-.demo-commit-msg {
+.demo-commit-msg { /* DEMO ONLY */
   font-family: var(--font-body);
   font-size: 0.82rem;
   color: var(--text-dim);
@@ -1463,7 +1528,7 @@ input[type="range"]::-webkit-slider-thumb {
   white-space: nowrap;
 }
 
-.demo-empty {
+.demo-empty { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.54rem;
   color: var(--text-faint);
@@ -1471,7 +1536,7 @@ input[type="range"]::-webkit-slider-thumb {
   padding: 8px 0;
 }
 
-.demo-footer {
+.demo-footer { /* DEMO ONLY */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1480,7 +1545,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-top: 1px solid var(--border);
 }
 
-.demo-ring {
+.demo-ring { /* DEMO ONLY */
   width: 36px;
   height: 36px;
   flex-shrink: 0;
@@ -1507,14 +1572,14 @@ input[type="range"]::-webkit-slider-thumb {
   transition: stroke-dashoffset 0.1s linear;
 }
 
-.demo-ring-label {
+.demo-ring-label { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.54rem;
   color: var(--text-faint);
   letter-spacing: 0.06em;
 }
 
-.demo-hint {
+.demo-hint { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.54rem;
   color: var(--amber);
@@ -1522,7 +1587,7 @@ input[type="range"]::-webkit-slider-thumb {
   transition: opacity 0.4s ease;
 }
 
-.demo-playback-btn {
+.demo-playback-btn { /* DEMO ONLY */
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem;
   letter-spacing: 0.06em;
@@ -1547,7 +1612,7 @@ input[type="range"]::-webkit-slider-thumb {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.demo-toast {
+.demo-toast { /* DEMO ONLY */
   position: absolute;
   bottom: 60px;
   left: 50%;
@@ -1826,9 +1891,10 @@ input[type="range"]::-webkit-slider-thumb {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SYLLABLE EDITOR
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ==========================================================================
+   9. SYLLABLE EDITOR
+   Gutter, syllable counts, rhyme color groups (A/B/C), form selector
+   ========================================================================== */
 
 .syl-editor {
   display: flex;
@@ -2537,11 +2603,21 @@ input[type="range"]::-webkit-slider-thumb {
   margin: 0 3px;
 }
 
+/* ==========================================================================
+  13. DARK / LIGHT THEME OVERRIDES
+   [data-theme="dark"] and [data-theme="light"] overrides
+   ========================================================================== */
+
 /* ─── Light theme grain adjustment ─── */
 [data-theme="light"] .grain { opacity: 0.015; }
 @media (prefers-color-scheme: light) {
   [data-theme="system"] .grain { opacity: 0.015; }
 }
+
+/* ==========================================================================
+  12. SETTINGS
+   Preferences panel, theme switcher, font options, pause threshold
+   ========================================================================== */
 
 /* ─── Settings Gear Icon ─── */
 .settings-gear {
@@ -2668,6 +2744,11 @@ input[type="range"]::-webkit-slider-thumb {
   transition: color 0.2s;
 }
 .settings-back:hover { color: var(--text-dim); }
+
+/* ==========================================================================
+  10. PLAYBACK
+   Commit playback view, timeline, speed controls, animation
+   ========================================================================== */
 
 /* ─── Playback CSS Classes ─── */
 .playback-container {

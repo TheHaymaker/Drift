@@ -42,8 +42,8 @@ export function createSyncClient(docId, filename, gitClient) {
             hash: c.hash,
           });
           content = result.content;
-        } catch {
-          // If we can't read the content, skip this commit
+        } catch(err) {
+          console.error('[sync] getFileAt failed, skipping commit:', err.message);
           continue;
         }
         commits.push({
@@ -73,7 +73,7 @@ export function createSyncClient(docId, filename, gitClient) {
       retryCount = 0;
       syncStatus = pushQueue.length > 0 ? "pending" : "synced";
     } catch (err) {
-      console.error("[sync] push failed:", err);
+      console.error(`[sync] push failed (attempt ${retryCount + 1}):`, err.message);
       // Put failed commits back at the front of the queue
       pushQueue = [...batch, ...pushQueue];
       retryCount++;
@@ -109,6 +109,7 @@ export function createSyncClient(docId, filename, gitClient) {
   return {
     pushCommit(commitData) {
       pushQueue.push(commitData);
+      retryCount = 0;
       schedulePush();
     },
 

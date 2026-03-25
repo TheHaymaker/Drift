@@ -8,6 +8,9 @@
 
 import git from "isomorphic-git";
 import LightningFS from "@isomorphic-git/lightning-fs";
+import { lcs } from "../lcs.js";
+import { generateCommitMessage } from "./commit-message.js";
+import { squashCommits, deleteCommits, reorderCommits } from "./history-ops.js";
 
 // ─── Per-document state ───
 
@@ -36,7 +39,7 @@ function getOrCreateFS(docId) {
 
 const author = { name: "drift", email: "drift@poem" };
 
-// ─── HTML stripping for commit message analysis ───
+// ─── HTML stripping (used by structuredDiff) ───
 
 function stripHtml(html) {
   if (!html) return '';
@@ -57,94 +60,7 @@ function stripHtml(html) {
     .replace(/^\n+|\n+$/g, '');
 }
 
-// ─── Commit message generation (ported from Session.js:116-169) ───
-
-function generateMessage(oldRaw, newRaw) {
-  const oldText = stripHtml(oldRaw);
-  const newText = stripHtml(newRaw);
-  const oldLines = oldText.split("\n");
-  const newLines = newText.split("\n");
-
-  if (oldText === "") return "begin";
-
-  const oldWords = oldText.split(/\s+/).filter(Boolean);
-  const newWords = newText.split(/\s+/).filter(Boolean);
-  const added = newWords.length - oldWords.length;
-
-  const changedLines = [];
-  const maxLen = Math.max(oldLines.length, newLines.length);
-  for (let i = 0; i < maxLen; i++) {
-    if ((oldLines[i] || "") !== (newLines[i] || "")) {
-      changedLines.push(i);
-    }
-  }
-
-  if (newLines.length > oldLines.length && added > 0) {
-    const newContent = newLines.filter(
-      (l, i) => i >= oldLines.length || l !== oldLines[i]
-    );
-    const preview = newContent.join(" ").slice(0, 40);
-    if (preview.trim())
-      return `+ ${preview}${preview.length >= 40 ? "\u2026" : ""}`;
-    return `+ ${added} word${added !== 1 ? "s" : ""}`;
-  }
-
-  if (newLines.length < oldLines.length) {
-    const removed = oldWords.length - newWords.length;
-    return `- ${removed} word${removed !== 1 ? "s" : ""}, ${oldLines.length - newLines.length} line${oldLines.length - newLines.length !== 1 ? "s" : ""}`;
-  }
-
-  if (changedLines.length === 1) {
-    const li = changedLines[0];
-    const oldL = oldLines[li] || "";
-    const newL = newLines[li] || "";
-    if (oldL && newL) {
-      const ow = oldL.split(/\s+/);
-      const nw = newL.split(/\s+/);
-      const changed = nw.filter((w) => !ow.includes(w));
-      if (changed.length <= 3 && changed.length > 0) {
-        return `~ ${changed.join(" ")}`;
-      }
-    }
-    const preview = (newLines[li] || "").slice(0, 40);
-    return `~ line ${li + 1}: ${preview}`;
-  }
-
-  if (changedLines.length > 1) {
-    return `~ ${changedLines.length} lines revised`;
-  }
-
-  if (added > 0) return `+ ${added} word${added !== 1 ? "s" : ""}`;
-  if (added < 0)
-    return `- ${Math.abs(added)} word${Math.abs(added) !== 1 ? "s" : ""}`;
-  return "pause";
-}
-
-// ─── LCS and diff (adapted from build-frames.js:8-98) ───
-
-function lcs(a, b) {
-  const m = a.length,
-    n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++)
-      dp[i][j] =
-        a[i - 1] === b[j - 1]
-          ? dp[i - 1][j - 1] + 1
-          : Math.max(dp[i - 1][j], dp[i][j - 1]);
-  const res = [];
-  let i = m,
-    j = n;
-  while (i > 0 && j > 0) {
-    if (a[i - 1] === b[j - 1]) {
-      res.unshift({ ai: i - 1, bi: j - 1, v: a[i - 1] });
-      i--;
-      j--;
-    } else if (dp[i - 1][j] > dp[i][j - 1]) i--;
-    else j--;
-  }
-  return res;
-}
+// ─── Structured diff (adapted from build-frames.js) ───
 
 function structuredDiff(oldRaw, newRaw) {
   const oldLines = stripHtml(oldRaw).split("\n");
@@ -206,7 +122,8 @@ async function handleInit({ docId, filename }) {
 
   try {
     await lfs.promises.stat(dir);
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] handleInit stat failed:', err.message, err.stack);
     await lfs.promises.mkdir(dir, { recursive: true });
   }
 
@@ -217,7 +134,8 @@ async function handleInit({ docId, filename }) {
       doc.lastContent = new TextDecoder().decode(
         await lfs.promises.readFile(`${dir}/${filename}`)
       );
-    } catch {
+    } catch (err) {
+      console.error('[git-worker] handleInit readFile failed:', err.message, err.stack);
       doc.lastContent = "";
     }
     return { ok: true, existing: true };
@@ -247,14 +165,20 @@ async function handleWriteFile({ docId, filename, content }) {
   // Reset pause timer
   clearTimeout(doc.pauseTimer);
   doc.pauseTimer = setTimeout(() => {
-    if (content !== doc.lastContent) {
-      const message = generateMessage(doc.lastContent, content);
-      doCommit(doc, filename, message, content).then((result) => {
-        if (result) {
-          // Unsolicited committed event — push to main thread
-          self.postMessage({ type: "committed", ...result });
-        }
-      });
+    try {
+      if (content !== doc.lastContent) {
+        const message = generateCommitMessage(doc.lastContent, content);
+        doCommit(doc, filename, message, content).then((result) => {
+          if (result) {
+            // Unsolicited committed event — push to main thread
+            self.postMessage({ type: "committed", ...result });
+          }
+        }).catch((err) => {
+          console.error('[git-worker] pause-timer commit error:', err);
+        });
+      }
+    } catch (err) {
+      console.error('[git-worker] pause-timer commit error:', err);
     }
   }, doc.pauseThreshold);
 
@@ -268,7 +192,8 @@ async function doCommit(doc, filename, message, content) {
   try {
     const status = await git.status({ fs: lfs, dir, filepath: filename });
     if (status === "unmodified") return null;
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] doCommit status check failed:', err.message, err.stack);
     // File might not be tracked yet
   }
 
@@ -285,7 +210,8 @@ async function doCommit(doc, filename, message, content) {
         headBlob.every((b, i) => b === currentBytes[i])) {
       return null; // no change from HEAD
     }
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] doCommit HEAD blob comparison failed:', err.message, err.stack);
     // HEAD doesn't exist or file is new — proceed with commit
   }
 
@@ -315,7 +241,7 @@ async function handleCommit({ docId, filename, content, lastContent }) {
   clearTimeout(doc.pauseTimer);
 
   if (content === lastContent) return { noChange: true };
-  const message = generateMessage(
+  const message = generateCommitMessage(
     lastContent !== undefined ? lastContent : doc.lastContent,
     content
   );
@@ -334,12 +260,13 @@ async function handleForceCommit({ docId, filename, message }) {
     content = new TextDecoder().decode(
       await lfs.promises.readFile(`${dir}/${filename}`)
     );
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] handleForceCommit readFile failed:', err.message, err.stack);
     return { noChange: true };
   }
 
   if (content === doc.lastContent) return { noChange: true };
-  const commitMsg = message || generateMessage(doc.lastContent, content);
+  const commitMsg = message || generateCommitMessage(doc.lastContent, content);
   const result = await doCommit(doc, filename, commitMsg, content);
   return result || { noChange: true };
 }
@@ -352,7 +279,8 @@ async function handleReadFile({ docId, filename }) {
       await doc.fs.promises.readFile(`${doc.dir}/${filename}`)
     );
     return { content };
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] handleReadFile failed:', err.message, err.stack);
     return { content: "" };
   }
 }
@@ -379,7 +307,8 @@ async function getLogInternal(lfs, dir, docId) {
     }
 
     return result;
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] getLogInternal failed:', err.message, err.stack);
     return [];
   }
 }
@@ -402,7 +331,8 @@ async function handleGetFileAt({ docId, filename, hash }) {
     if (!oid) {
       try {
         oid = await git.expandOid({ fs: lfs, dir, oid: hash });
-      } catch {
+      } catch (err) {
+        console.error('[git-worker] handleGetFileAt expandOid failed:', err.message, err.stack);
         return { content: "" };
       }
     }
@@ -414,7 +344,8 @@ async function handleGetFileAt({ docId, filename, hash }) {
       filepath: filename,
     });
     return { content: new TextDecoder().decode(blob) };
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] handleGetFileAt failed:', err.message, err.stack);
     return { content: "" };
   }
 }
@@ -434,7 +365,8 @@ async function handleClone({ docId, filename, commits }) {
 
   try {
     await lfs.promises.stat(dir);
-  } catch {
+  } catch (err) {
+    console.error('[git-worker] handleClone stat failed:', err.message, err.stack);
     await lfs.promises.mkdir(dir, { recursive: true });
   }
 
@@ -485,74 +417,7 @@ async function handleSquash({ docId, filename, fromIndex, toIndex, message }) {
   const doc = getDoc(docId);
   if (!doc) throw new Error(`doc ${docId} not initialized`);
   clearTimeout(doc.pauseTimer);
-  const { fs: lfs, dir } = doc;
-
-  // 1. Read full log and content at each commit
-  const commits = await git.log({ fs: lfs, dir });
-  const chronological = [...commits].reverse();
-  const snapshots = [];
-  for (const c of chronological) {
-    let content = "";
-    try {
-      const { blob } = await git.readBlob({
-        fs: lfs, dir, oid: c.oid, filepath: filename,
-      });
-      content = new TextDecoder().decode(blob);
-    } catch {}
-    snapshots.push({
-      message: c.commit.message.trim(),
-      date: c.commit.author.timestamp,
-      content,
-    });
-  }
-
-  // 2. Build new commit plan: collapse fromIndex..toIndex into one
-  const newPlan = [];
-  for (let i = 0; i < snapshots.length; i++) {
-    if (i === fromIndex) {
-      // Squashed commit: use content from toIndex, combine messages
-      const msgs = [];
-      for (let j = fromIndex; j <= toIndex; j++) {
-        msgs.push(snapshots[j].message);
-      }
-      const squashMsg = message || ("squash #" + (fromIndex + 1) + "\u2013#" + (toIndex + 1) + ": " + msgs.join("; "));
-      newPlan.push({
-        message: squashMsg,
-        date: snapshots[toIndex].date,
-        content: snapshots[toIndex].content,
-      });
-    } else if (i > fromIndex && i <= toIndex) {
-      // Skip — these are squashed into fromIndex
-      continue;
-    } else {
-      newPlan.push(snapshots[i]);
-    }
-  }
-
-  // 3. Wipe and rebuild the repo
-  const fsName = `drift-${docId}`;
-  const newFs = new LightningFS(fsName, { wipe: true });
-  doc.fs = newFs;
-
-  try { await newFs.promises.mkdir(dir, { recursive: true }); } catch {}
-  await git.init({ fs: newFs, dir, defaultBranch: "main" });
-
-  for (const c of newPlan) {
-    await newFs.promises.writeFile(`${dir}/${filename}`, c.content);
-    await git.add({ fs: newFs, dir, filepath: filename });
-    await git.commit({
-      fs: newFs, dir,
-      message: c.message,
-      author: { ...author, timestamp: c.date },
-    });
-  }
-
-  doc.lastContent = newPlan[newPlan.length - 1].content;
-  const log = await getLogInternal(newFs, dir, docId);
-  return {
-    log,
-    content: doc.lastContent,
-  };
+  return squashCommits({ doc, docId, filename, fromIndex, toIndex, message, oidCache });
 }
 
 // ─── Delete commits (history rewrite) ───
@@ -561,57 +426,7 @@ async function handleDeleteCommits({ docId, filename, indices }) {
   const doc = getDoc(docId);
   if (!doc) throw new Error(`doc ${docId} not initialized`);
   clearTimeout(doc.pauseTimer);
-  const { fs: lfs, dir } = doc;
-
-  const indexSet = new Set(indices);
-
-  // 1. Read full log and content at each commit
-  const commits = await git.log({ fs: lfs, dir });
-  const chronological = [...commits].reverse();
-  const snapshots = [];
-  for (const c of chronological) {
-    let content = "";
-    try {
-      const { blob } = await git.readBlob({
-        fs: lfs, dir, oid: c.oid, filepath: filename,
-      });
-      content = new TextDecoder().decode(blob);
-    } catch {}
-    snapshots.push({
-      message: c.commit.message.trim(),
-      date: c.commit.author.timestamp,
-      content,
-    });
-  }
-
-  // 2. Filter out deleted commits
-  const newPlan = snapshots.filter((_, i) => !indexSet.has(i));
-  if (newPlan.length === 0) throw new Error("cannot delete all commits");
-
-  // 3. Wipe and rebuild the repo
-  const fsName = `drift-${docId}`;
-  const newFs = new LightningFS(fsName, { wipe: true });
-  doc.fs = newFs;
-
-  try { await newFs.promises.mkdir(dir, { recursive: true }); } catch {}
-  await git.init({ fs: newFs, dir, defaultBranch: "main" });
-
-  for (const c of newPlan) {
-    await newFs.promises.writeFile(`${dir}/${filename}`, c.content);
-    await git.add({ fs: newFs, dir, filepath: filename });
-    await git.commit({
-      fs: newFs, dir,
-      message: c.message,
-      author: { ...author, timestamp: c.date },
-    });
-  }
-
-  doc.lastContent = newPlan[newPlan.length - 1].content;
-  const log = await getLogInternal(newFs, dir, docId);
-  return {
-    log,
-    content: doc.lastContent,
-  };
+  return deleteCommits({ doc, docId, filename, indices, oidCache });
 }
 
 // ─── Reorder commits (history rewrite) ───
@@ -620,55 +435,7 @@ async function handleReorder({ docId, filename, newOrder }) {
   const doc = getDoc(docId);
   if (!doc) throw new Error(`doc ${docId} not initialized`);
   clearTimeout(doc.pauseTimer);
-  const { fs: lfs, dir } = doc;
-
-  // 1. Read all commits and their content, indexed by short hash
-  const commits = await git.log({ fs: lfs, dir });
-  const byHash = {};
-  for (const c of commits) {
-    const shortHash = c.oid.slice(0, 7);
-    let content = "";
-    try {
-      const { blob } = await git.readBlob({
-        fs: lfs, dir, oid: c.oid, filepath: filename,
-      });
-      content = new TextDecoder().decode(blob);
-    } catch {}
-    byHash[shortHash] = {
-      message: c.commit.message.trim(),
-      date: c.commit.author.timestamp,
-      content,
-    };
-  }
-
-  // 2. Build new commit plan in the requested order
-  const newPlan = newOrder.map(hash => byHash[hash]).filter(Boolean);
-  if (newPlan.length === 0) throw new Error("reorder: no valid commits");
-
-  // 3. Wipe and rebuild
-  const fsName = `drift-${docId}`;
-  const newFs = new LightningFS(fsName, { wipe: true });
-  doc.fs = newFs;
-
-  try { await newFs.promises.mkdir(dir, { recursive: true }); } catch {}
-  await git.init({ fs: newFs, dir, defaultBranch: "main" });
-
-  for (const c of newPlan) {
-    await newFs.promises.writeFile(`${dir}/${filename}`, c.content);
-    await git.add({ fs: newFs, dir, filepath: filename });
-    await git.commit({
-      fs: newFs, dir,
-      message: c.message,
-      author: { ...author, timestamp: c.date },
-    });
-  }
-
-  doc.lastContent = newPlan[newPlan.length - 1].content;
-  const log = await getLogInternal(newFs, dir, docId);
-  return {
-    log,
-    content: doc.lastContent,
-  };
+  return reorderCommits({ doc, docId, filename, newOrder, oidCache });
 }
 
 // ─── Message handler ───

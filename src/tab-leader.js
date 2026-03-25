@@ -35,17 +35,22 @@ export function electLeader(docId) {
 
     clearTimeout(electionTimeout);
     electionTimeout = setTimeout(() => {
-      // Lowest tabId wins (lexicographic)
+      // Lowest tabId wins (lexicographic); use earlier timestamp as tiebreaker
       let winnerId = null;
-      for (const id of candidates.keys()) {
-        if (!winnerId || id < winnerId) winnerId = id;
+      for (const [id, ts] of candidates.entries()) {
+        if (!winnerId) {
+          winnerId = id;
+        } else {
+          const winnerTs = candidates.get(winnerId);
+          if (ts < winnerTs || (ts === winnerTs && id < winnerId)) winnerId = id;
+        }
       }
       leader = winnerId;
       if (leader === tabId) {
         channel.postMessage({ type: "leader", tabId });
       }
       for (const cb of leaderChangeListeners) {
-        try { cb(leader === tabId); } catch {}
+        try { cb(leader === tabId); } catch(err) { console.error('[tab-leader] callback error:', err); }
       }
     }, 200);
   }
@@ -60,7 +65,7 @@ export function electLeader(docId) {
     if (msg.type === "leader") {
       leader = msg.tabId;
       for (const cb of leaderChangeListeners) {
-        try { cb(leader === tabId); } catch {}
+        try { cb(leader === tabId); } catch(err) { console.error('[tab-leader] callback error:', err); }
       }
     }
 
@@ -74,14 +79,14 @@ export function electLeader(docId) {
     if (msg.type === "write" && leader === tabId) {
       // Forward to committedListeners — the main.js will feed this to gitClient
       for (const cb of committedListeners) {
-        try { cb({ type: "follower-write", content: msg.content, fromTab: msg.tabId }); } catch {}
+        try { cb({ type: "follower-write", content: msg.content, fromTab: msg.tabId }); } catch(err) { console.error('[tab-leader] callback error:', err); }
       }
     }
 
     // Followers receive committed events from leader
     if (msg.type === "committed" && leader !== tabId) {
       for (const cb of committedListeners) {
-        try { cb(msg); } catch {}
+        try { cb(msg); } catch(err) { console.error('[tab-leader] callback error:', err); }
       }
     }
   };
