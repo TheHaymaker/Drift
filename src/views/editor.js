@@ -9,6 +9,7 @@ import { createSyncClient } from "../sync.js";
 import { state } from '../state.js';
 import { showToast } from '../toast.js';
 import { renderCommits } from '../editor/commit-list.js';
+import { checkAuth } from '../auth.js';
 
 // Lazy import to avoid circular dep: router → editor → router
 let _navigate = (hash) => { location.hash = hash; };
@@ -227,8 +228,11 @@ export function disconnectWs() {
   }
 }
 
+let wsReconnectAttempt = 0;
+
 export function connectWs(docId) {
   disconnectWs();
+  wsReconnectAttempt = 0;
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   state.ws = new WebSocket(`${proto}//${location.host}`);
 
@@ -306,7 +310,18 @@ export function connectWs(docId) {
       status.className = "status-pill";
     }
     if (_getRoute().docId === docId) {
-      setTimeout(() => connectWs(docId), 3000);
+      wsReconnectAttempt++;
+      const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempt - 1), 30000);
+      setTimeout(async () => {
+        if (_getRoute().docId !== docId) return;
+        const authed = await checkAuth();
+        if (!authed) {
+          state.currentUser = null;
+          location.hash = "#/";
+          return;
+        }
+        connectWs(docId);
+      }, delay);
     }
   };
 

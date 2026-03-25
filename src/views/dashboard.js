@@ -105,7 +105,13 @@ export function showDashboard() {
 export async function loadDocList() {
   const docList = document.getElementById("docList");
   try {
-    const docs = await fetch("/api/documents").then(r => r.json());
+    const res = await fetch("/api/documents");
+    if (res.status === 401) {
+      state.currentUser = null;
+      location.hash = "#/";
+      return;
+    }
+    const docs = await res.json();
     docList.innerHTML = "";
     if (docs.length === 0) {
       docList.innerHTML = '<div class="doc-empty">no poems yet. start one.</div>';

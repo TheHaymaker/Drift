@@ -66,6 +66,9 @@ const distDir = path.join(__dirname, "dist");
 const staticDir = fs.existsSync(distDir) ? distDir : path.join(__dirname, "public");
 app.use(express.static(staticDir));
 
+// ─── Health check (used by fly.io to detect readiness) ───
+app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
 // ─── Auth routes ───
 app.use(createAuthRouter());
 
