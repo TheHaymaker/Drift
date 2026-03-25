@@ -60,6 +60,8 @@ function MagicMoveRenderer({ commits, currentIndex, animDuration = BASE_SMM_DURA
         .magic-move-wrapper .shiki-magic-move-container {
           background: transparent !important;
           padding: 16px 32px;
+          white-space: pre-wrap !important;
+          word-wrap: break-word;
         }
         .magic-move-wrapper pre,
         .magic-move-wrapper code {

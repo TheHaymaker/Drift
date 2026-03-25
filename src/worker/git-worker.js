@@ -39,9 +39,11 @@ const author = { name: "drift", email: "drift@poem" };
 function stripHtml(html) {
   if (!html) return '';
   return html
+    // Remove Tiptap/ProseMirror trailing breaks inside paragraphs
+    .replace(/<br\s*(?:class="[^"]*")?\s*\/?>\s*<\/p>/gi, '</p>')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/?p[^>]*>/gi, '')
     .replace(/<[^>]*>/g, '')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -49,7 +51,8 @@ function stripHtml(html) {
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
     .replace(/&nbsp;/g, ' ')
-    .replace(/\n$/, '');
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^\n+|\n+$/g, '');
 }
 
 // ─── Commit message generation (ported from Session.js:116-169) ───

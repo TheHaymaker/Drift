@@ -301,13 +301,16 @@ app.get("/api/documents/:docId/playback", requireAuth, async (req, res) => {
       const raw = await GitOps.getFileAt(doc.repoPath, c.hash, doc.filename);
       // Strip HTML tags for playback (content may be rich text HTML)
       const plain = raw
+        // Remove Tiptap/ProseMirror trailing breaks inside paragraphs
+        .replace(/<br\s*(?:class="[^"]*")?\s*\/?>\s*<\/p>/gi, '</p>')
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/?p[^>]*>/gi, '')
         .replace(/<[^>]*>/g, '')
         .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&nbsp;/g, ' ')
-        .replace(/\n$/, '');
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/^\n+|\n+$/g, '');
       const lines = plain.split("\n");
       if (lines[lines.length - 1] === "") lines.pop();
       commits.push({
