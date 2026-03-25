@@ -1331,6 +1331,13 @@ function exitNavMode() {
   diffPanel.classList.add("hidden");
 }
 
+async function restoreHeadContent() {
+  if (!commitLog.length) return;
+  const head = commitLog[commitLog.length - 1];
+  const content = await fetchSnapshot(head.hash);
+  setEditorContent(content);
+}
+
 async function loadSnapshot(c) {
   if (c.index > 0) {
     const prev = commitLog[c.index - 1];
@@ -1369,8 +1376,7 @@ async function redoCommit() {
     if (historyPosition === commitLog.length - 1) {
       // Back at HEAD
       exitNavMode();
-      // Reload HEAD content
-      await loadSnapshot(commitLog[commitLog.length - 1]);
+      await restoreHeadContent();
     } else {
       updateNavUI();
       await loadSnapshot(commitLog[historyPosition]);
@@ -1382,10 +1388,7 @@ undoBtn.addEventListener("click", undoCommit);
 redoBtn.addEventListener("click", redoCommit);
 navBannerClose.addEventListener("click", async () => {
   exitNavMode();
-  // Restore HEAD content
-  if (commitLog.length > 0) {
-    await loadSnapshot(commitLog[commitLog.length - 1]);
-  }
+  await restoreHeadContent();
 });
 
 // Keyboard shortcuts for undo/redo navigation
@@ -1573,8 +1576,9 @@ function renderDiff(segments, commit) {
   diffPanel.classList.remove("hidden");
 }
 
-function closeDiff() {
-  diffPanel.classList.add("hidden");
+async function closeDiff() {
+  exitNavMode();
+  await restoreHeadContent();
 }
 
 diffClose.addEventListener("click", closeDiff);
@@ -1756,7 +1760,7 @@ editor.addEventListener("blur", () => {
 editor.addEventListener("focus", async () => {
   if (!currentDocId) return;
   document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
-  closeDiff();
+  exitNavMode();
   if (gitClient && currentDocId && currentFilename) {
     try {
       const result = await gitClient.readFile({ docId: currentDocId, filename: currentFilename });
