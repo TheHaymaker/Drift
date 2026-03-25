@@ -971,7 +971,7 @@ newPoemBtn.addEventListener("click", async () => {
   }
 });
 
-backBtn.addEventListener("click", () => navigate("#/"));
+backBtn.addEventListener("click", () => navigate("#/poems"));
 
 // ─── Editor ───
 
