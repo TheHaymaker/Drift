@@ -409,6 +409,36 @@ app.post("/api/documents/:docId/sync/push", requireAuth, async (req, res) => {
   }
 });
 
+// ─── Sync: Full history rewrite (after squash/reorder) ───
+app.post("/api/documents/:docId/sync/rewrite", requireAuth, async (req, res) => {
+  const doc = DocumentStore.getDocumentForOwner(req.params.docId, req.session.userId);
+  if (!doc) return res.status(404).json({ error: "not found" });
+  try {
+    const { commits } = req.body;
+    if (!Array.isArray(commits)) {
+      return res.status(400).json({ error: "commits must be an array" });
+    }
+
+    // Remove the existing repo directory and recreate from scratch
+    const repoDir = doc.repoPath;
+    const fs = await import("fs/promises");
+    try { await fs.rm(repoDir, { recursive: true, force: true }); } catch {}
+
+    await GitOps.ensureRepo(repoDir, doc.filename);
+    for (const c of commits) {
+      await GitOps.writeFile(repoDir, doc.filename, c.content);
+      await GitOps.commitFile(repoDir, doc.filename, c.message);
+    }
+
+    DocumentStore.touchLastModified(doc.doc_id);
+    const log = await GitOps.getLog(repoDir, doc.filename);
+    res.json({ ok: true, count: log.length });
+  } catch (e) {
+    console.error("  sync/rewrite failed:", e.message);
+    res.status(500).json({ error: "rewrite failed" });
+  }
+});
+
 // Catch-all: serve index.html for client-side routing
 app.get("*", (req, res) => {
   res.sendFile(path.join(staticDir, "index.html"));
