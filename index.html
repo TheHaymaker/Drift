@@ -165,7 +165,7 @@
   <div class="dashboard-header">
     <a class="dashboard-title dashboard-home-link" id="dashboardHomeBtn" href="#/poems">drift</a>
     <div class="dashboard-subtitle" id="dashboardSubtitle">your poems</div>
-    <a class="settings-gear" href="#/settings" title="settings">&#9881;</a>
+    <a class="settings-gear" href="#/settings" title="settings">&#9881; settings</a>
     <button class="auth-toggle logout-btn" id="logoutBtn">log out</button>
   </div>
   <button class="new-poem-btn" id="newPoemBtn">+ new poem</button>
@@ -181,6 +181,7 @@
       <span class="editor-title" id="backBtn">drift</span>
       <span class="editor-filename" id="filename">poem.txt</span>
       <button class="syl-mode-btn" id="sylModeBtn" title="Toggle invisible hand / forms">invisible hand / forms</button>
+      <a class="settings-gear editor-settings-gear" href="#/settings" title="settings">&#9881; settings</a>
       <span class="status-pill" id="status">connecting</span>
     </div>
     <div class="editor-area">
@@ -213,67 +214,74 @@
   </div>
 
   <div class="sidebar">
-    <div class="sidebar-title">commit history</div>
-    <div class="commit-count">
-      <span id="commitCountNum">0</span>
-      snapshots
-    </div>
-    <div class="nav-mode-banner hidden" id="navBanner">
-      <span id="navBannerText">viewing snapshot</span>
-      <button class="nav-banner-close" id="navBannerClose">&times;</button>
-    </div>
-    <div class="history-nav">
-      <button class="btn btn-icon" id="undoBtn" title="Previous snapshot (Ctrl+Z)">&#8617;</button>
-      <button class="btn btn-icon" id="redoBtn" title="Next snapshot (Ctrl+Shift+Z)">&#8618;</button>
-    </div>
-    <div class="commits" id="commitList"></div>
+    <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">&#9664;</button>
 
-    <div class="selection-action-bar hidden" id="selectionActionBar">
-      <span id="selectionCountText">0 selected</span>
-      <button class="btn btn-sm" id="squashSelectedBtn" disabled>squash</button>
-      <button class="btn btn-sm" id="deleteSelectedBtn">delete</button>
-      <button class="btn btn-sm" id="clearSelectionBtn">cancel</button>
+    <div class="sidebar-mini">
+      <span class="sidebar-mini-count" id="miniCommitCount">0</span>
     </div>
 
-    <!-- Squash confirmation modal -->
-    <div class="commit-modal-overlay hidden" id="squashModal">
-      <div class="commit-modal">
-        <p>Combine <strong><span id="squashModalCount">0</span> snapshots</strong> into one?</p>
-        <p class="commit-modal-message" id="squashModalMessage"></p>
-        <a href="#" id="squashModalHelp" class="commit-modal-help-toggle">what does this do?</a>
-        <p class="commit-modal-help-text hidden" id="squashHelpText">
-          Squashing combines the selected snapshots into a single snapshot,
-          preserving the final content. The intermediate history is removed.
-        </p>
-        <div class="commit-modal-actions">
-          <button class="btn btn-sm" id="squashModalConfirm">squash</button>
-          <button class="btn btn-sm" id="squashModalCancel">cancel</button>
+    <div class="sidebar-inner">
+      <div class="sidebar-title">commit history</div>
+      <div class="commit-count">
+        <span id="commitCountNum">0</span>
+        snapshots
+      </div>
+      <div class="nav-mode-banner hidden" id="navBanner">
+        <span id="navBannerText">viewing snapshot</span>
+        <button class="nav-banner-close" id="navBannerClose">&times;</button>
+      </div>
+      <div class="history-nav">
+        <button class="btn btn-icon" id="undoBtn" title="Previous snapshot (Ctrl+Z)">&#8617;</button>
+        <button class="btn btn-icon" id="redoBtn" title="Next snapshot (Ctrl+Shift+Z)">&#8618;</button>
+      </div>
+      <div class="commits" id="commitList"></div>
+
+      <div class="selection-action-bar hidden" id="selectionActionBar">
+        <span id="selectionCountText">0 selected</span>
+        <button class="btn btn-sm" id="squashSelectedBtn" disabled>squash</button>
+        <button class="btn btn-sm" id="deleteSelectedBtn">delete</button>
+        <button class="btn btn-sm" id="clearSelectionBtn">cancel</button>
+      </div>
+
+      <!-- Squash confirmation modal -->
+      <div class="commit-modal-overlay hidden" id="squashModal">
+        <div class="commit-modal">
+          <p>Combine <strong><span id="squashModalCount">0</span> snapshots</strong> into one?</p>
+          <p class="commit-modal-message" id="squashModalMessage"></p>
+          <a href="#" id="squashModalHelp" class="commit-modal-help-toggle">what does this do?</a>
+          <p class="commit-modal-help-text hidden" id="squashHelpText">
+            Squashing combines the selected snapshots into a single snapshot,
+            preserving the final content. The intermediate history is removed.
+          </p>
+          <div class="commit-modal-actions">
+            <button class="btn btn-sm" id="squashModalConfirm">squash</button>
+            <button class="btn btn-sm" id="squashModalCancel">cancel</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Delete confirmation modal -->
-    <div class="commit-modal-overlay hidden" id="deleteModal">
-      <div class="commit-modal">
-        <p>Delete <strong><span id="deleteModalCount">0</span> snapshots</strong> from history?</p>
-        <p class="commit-modal-warning">This cannot be undone.</p>
-        <div class="commit-modal-actions">
-          <button class="btn btn-sm btn-danger" id="deleteModalConfirm">delete</button>
-          <button class="btn btn-sm" id="deleteModalCancel">cancel</button>
+      <!-- Delete confirmation modal -->
+      <div class="commit-modal-overlay hidden" id="deleteModal">
+        <div class="commit-modal">
+          <p>Delete <strong><span id="deleteModalCount">0</span> snapshots</strong> from history?</p>
+          <p class="commit-modal-warning">This cannot be undone.</p>
+          <div class="commit-modal-actions">
+            <button class="btn btn-sm btn-danger" id="deleteModalConfirm">delete</button>
+            <button class="btn btn-sm" id="deleteModalCancel">cancel</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="settings">
-      <div class="setting-row">
-        <span class="setting-label">pause threshold</span>
-        <span class="setting-value" id="thresholdValue">3.0s</span>
+      <div class="settings">
+        <div class="setting-row">
+          <span class="setting-label">pause threshold</span>
+          <span class="setting-value" id="thresholdValue">3.0s</span>
+        </div>
+        <input type="range" id="thresholdSlider" min="500" max="15000" step="250" value="3000">
+        <button class="btn" id="forceCommitBtn">commit now</button>
+        <button class="btn" id="playbackBtn" style="margin-top: 4px;">&#9654; play back</button>
+        <button class="btn" id="exportBtn" style="margin-top: 4px;">export history</button>
       </div>
-      <input type="range" id="thresholdSlider" min="500" max="15000" step="250" value="3000">
-      <button class="btn" id="forceCommitBtn">commit now</button>
-      <button class="btn" id="playbackBtn" style="margin-top: 4px;">&#9654; play back</button>
-      <button class="btn" id="exportBtn" style="margin-top: 4px;">export history</button>
-      <a class="settings-gear" href="#/settings" title="settings">&#9881; settings</a>
     </div>
   </div>
 </div>

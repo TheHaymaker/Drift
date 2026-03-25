@@ -1303,6 +1303,7 @@ commitList.addEventListener("drop", async (e) => {
 function renderCommits(log, newHash) {
   commitLog = log;
   commitCountNum.textContent = log.length;
+  if (miniCommitCount) miniCommitCount.textContent = log.length + " snapshots";
 
   // Update undo/redo button states
   updateNavButtons();
@@ -1425,6 +1426,26 @@ async function redoCommit() {
 
 undoBtn.addEventListener("click", undoCommit);
 redoBtn.addEventListener("click", redoCommit);
+
+// ── Sidebar collapse/expand ──
+const sidebarToggle = document.getElementById("sidebarToggle");
+const miniCommitCount = document.getElementById("miniCommitCount");
+const sidebar = document.querySelector(".sidebar");
+const editorView = document.getElementById("editorView");
+
+if (localStorage.getItem("sidebarCollapsed") === "true") {
+  sidebar.classList.add("collapsed");
+  editorView.classList.add("sidebar-collapsed");
+  sidebarToggle.innerHTML = "&#9654;";
+}
+
+sidebarToggle.addEventListener("click", () => {
+  const collapsed = sidebar.classList.toggle("collapsed");
+  editorView.classList.toggle("sidebar-collapsed", collapsed);
+  sidebarToggle.innerHTML = collapsed ? "&#9654;" : "&#9664;";
+  localStorage.setItem("sidebarCollapsed", collapsed);
+});
+
 navBannerClose.addEventListener("click", async () => {
   exitNavMode();
   await restoreHeadContent();
