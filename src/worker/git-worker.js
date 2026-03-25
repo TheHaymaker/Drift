@@ -519,7 +519,7 @@ async function handleRevertTo({ docId, filename, hash, commitIndex }) {
 
 // ─── Squash commits (history rewrite) ───
 
-async function handleSquash({ docId, filename, fromIndex, toIndex }) {
+async function handleSquash({ docId, filename, fromIndex, toIndex, message }) {
   const doc = getDoc(docId);
   if (!doc) throw new Error(`doc ${docId} not initialized`);
   clearTimeout(doc.pauseTimer);
@@ -553,8 +553,9 @@ async function handleSquash({ docId, filename, fromIndex, toIndex }) {
       for (let j = fromIndex; j <= toIndex; j++) {
         msgs.push(snapshots[j].message);
       }
+      const squashMsg = message || ("squash #" + (fromIndex + 1) + "\u2013#" + (toIndex + 1) + ": " + msgs.join("; "));
       newPlan.push({
-        message: "squash #" + (fromIndex + 1) + "\u2013#" + (toIndex + 1) + ": " + msgs.join("; "),
+        message: squashMsg,
         date: snapshots[toIndex].date,
         content: snapshots[toIndex].content,
       });
@@ -565,6 +566,65 @@ async function handleSquash({ docId, filename, fromIndex, toIndex }) {
       newPlan.push(snapshots[i]);
     }
   }
+
+  // 3. Wipe and rebuild the repo
+  const fsName = `drift-${docId}`;
+  const newFs = new LightningFS(fsName, { wipe: true });
+  doc.fs = newFs;
+
+  try { await newFs.promises.mkdir(dir, { recursive: true }); } catch {}
+  await git.init({ fs: newFs, dir, defaultBranch: "main" });
+
+  for (const c of newPlan) {
+    await newFs.promises.writeFile(`${dir}/${filename}`, c.content);
+    await git.add({ fs: newFs, dir, filepath: filename });
+    await git.commit({
+      fs: newFs, dir,
+      message: c.message,
+      author: { ...author, timestamp: c.date },
+    });
+  }
+
+  doc.lastContent = newPlan[newPlan.length - 1].content;
+  const log = await getLogInternal(newFs, dir, docId);
+  return {
+    log,
+    content: doc.lastContent,
+  };
+}
+
+// ─── Delete commits (history rewrite) ───
+
+async function handleDeleteCommits({ docId, filename, indices }) {
+  const doc = getDoc(docId);
+  if (!doc) throw new Error(`doc ${docId} not initialized`);
+  clearTimeout(doc.pauseTimer);
+  const { fs: lfs, dir } = doc;
+
+  const indexSet = new Set(indices);
+
+  // 1. Read full log and content at each commit
+  const commits = await git.log({ fs: lfs, dir });
+  const chronological = [...commits].reverse();
+  const snapshots = [];
+  for (const c of chronological) {
+    let content = "";
+    try {
+      const { blob } = await git.readBlob({
+        fs: lfs, dir, oid: c.oid, filepath: filename,
+      });
+      content = new TextDecoder().decode(blob);
+    } catch {}
+    snapshots.push({
+      message: c.commit.message.trim(),
+      date: c.commit.author.timestamp,
+      content,
+    });
+  }
+
+  // 2. Filter out deleted commits
+  const newPlan = snapshots.filter((_, i) => !indexSet.has(i));
+  if (newPlan.length === 0) throw new Error("cannot delete all commits");
 
   // 3. Wipe and rebuild the repo
   const fsName = `drift-${docId}`;
@@ -664,6 +724,7 @@ const handlers = {
   setThreshold: handleSetThreshold,
   revertTo: handleRevertTo,
   squash: handleSquash,
+  deleteCommits: handleDeleteCommits,
   reorder: handleReorder,
 };
 

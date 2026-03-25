@@ -210,11 +210,22 @@ const redoBtn = document.getElementById("redoBtn");
 const navBanner = document.getElementById("navBanner");
 const navBannerText = document.getElementById("navBannerText");
 const navBannerClose = document.getElementById("navBannerClose");
-const squashBtn = document.getElementById("squashBtn");
-const squashConfirmBar = document.getElementById("squashConfirmBar");
-const squashConfirmText = document.getElementById("squashConfirmText");
-const squashConfirmBtn = document.getElementById("squashConfirmBtn");
-const squashCancelBtn = document.getElementById("squashCancelBtn");
+const selectionActionBar = document.getElementById("selectionActionBar");
+const selectionCountText = document.getElementById("selectionCountText");
+const squashSelectedBtn = document.getElementById("squashSelectedBtn");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const clearSelectionBtn = document.getElementById("clearSelectionBtn");
+const squashModal = document.getElementById("squashModal");
+const squashModalCount = document.getElementById("squashModalCount");
+const squashModalMessage = document.getElementById("squashModalMessage");
+const squashModalHelp = document.getElementById("squashModalHelp");
+const squashHelpText = document.getElementById("squashHelpText");
+const squashModalConfirm = document.getElementById("squashModalConfirm");
+const squashModalCancel = document.getElementById("squashModalCancel");
+const deleteModal = document.getElementById("deleteModal");
+const deleteModalCount = document.getElementById("deleteModalCount");
+const deleteModalConfirm = document.getElementById("deleteModalConfirm");
+const deleteModalCancel = document.getElementById("deleteModalCancel");
 const diffTitle = document.getElementById("diffTitle");
 const diffBody = document.getElementById("diffBody");
 const diffClose = document.getElementById("diffClose");
@@ -237,10 +248,10 @@ function setEditorEditable(editable) {
   editor.dispatchEvent(new CustomEvent("_syl-editable", { detail: editable }));
 }
 
-// ─── Squash mode state ───
-let squashMode = false;
-let squashStart = null; // commit index
-let squashEnd = null;   // commit index
+// ─── Commit selection state ───
+let selectedCommits = new Set(); // Set of commit indices
+let lastSelectedIndex = null;   // For shift+click range selection
+let pendingDeleteIndices = null; // Indices pending delete confirmation
 
 // ─── Drag-and-drop state ───
 let dragSourceIndex = null;
@@ -1129,14 +1140,7 @@ function createCommitItem(c, isNew, log) {
   let cls = "commit-item";
   if (isNew) cls += " new";
   if (historyPosition >= 0 && c.index === historyPosition) cls += " viewing";
-  if (squashMode) {
-    if (c.index === squashStart || c.index === squashEnd) cls += " squash-selected";
-    else if (squashStart !== null && squashEnd !== null) {
-      const lo = Math.min(squashStart, squashEnd);
-      const hi = Math.max(squashStart, squashEnd);
-      if (c.index > lo && c.index < hi) cls += " squash-range";
-    }
-  }
+  if (selectedCommits.has(c.index)) cls += " selected";
   div.className = cls;
   div.dataset.hash = c.hash;
   div.dataset.index = c.index;
@@ -1146,7 +1150,10 @@ function createCommitItem(c, isNew, log) {
     '<div class="commit-hash">' + c.hash + '</div>' +
     '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
     '<div class="commit-time">#' + (c.index + 1) + '</div>' +
-    (c.index < logLen - 1 ? '<button class="commit-revert-btn">revert to here</button>' : '');
+    '<div class="commit-actions">' +
+      (c.index < logLen - 1 ? '<button class="commit-revert-btn">revert</button>' : '') +
+      (logLen > 1 ? '<button class="commit-delete-btn">delete</button>' : '') +
+    '</div>';
   return div;
 }
 
@@ -1185,16 +1192,48 @@ commitList.addEventListener("click", async (e) => {
     return;
   }
 
+  // Handle inline delete button clicks
+  if (e.target.classList.contains("commit-delete-btn")) {
+    e.stopPropagation();
+    const item = e.target.closest(".commit-item");
+    if (!item) return;
+    const index = parseInt(item.dataset.index, 10);
+    showDeleteModal([index]);
+    return;
+  }
+
   const item = e.target.closest(".commit-item");
   if (!item) return;
 
-  const hash = item.dataset.hash;
   const index = parseInt(item.dataset.index, 10);
 
-  // Squash mode: select range
-  if (squashMode) {
-    handleSquashClick(index);
+  // Multi-select: Ctrl/Cmd+Click toggles individual, Shift+Click selects range
+  if (e.ctrlKey || e.metaKey) {
+    if (selectedCommits.has(index)) {
+      selectedCommits.delete(index);
+    } else {
+      selectedCommits.add(index);
+    }
+    lastSelectedIndex = index;
+    updateSelectionUI();
+    renderCommits(commitLog);
     return;
+  }
+
+  if (e.shiftKey && lastSelectedIndex !== null) {
+    const lo = Math.min(lastSelectedIndex, index);
+    const hi = Math.max(lastSelectedIndex, index);
+    for (let i = lo; i <= hi; i++) {
+      selectedCommits.add(i);
+    }
+    updateSelectionUI();
+    renderCommits(commitLog);
+    return;
+  }
+
+  // Plain click: clear selection and navigate
+  if (selectedCommits.size > 0) {
+    clearSelection();
   }
 
   // Navigate to this commit
@@ -1268,8 +1307,8 @@ function renderCommits(log, newHash) {
   // Update undo/redo button states
   updateNavButtons();
 
-  // Incremental update: prepend only the new commit (skip in squash/nav mode)
-  if (newHash && commitList.children.length > 0 && !squashMode && historyPosition === -1) {
+  // Incremental update: prepend only the new commit (skip when selecting/nav mode)
+  if (newHash && commitList.children.length > 0 && selectedCommits.size === 0 && historyPosition === -1) {
     const c = log.find(entry => entry.hash === newHash);
     if (c) {
       commitList.prepend(createCommitItem(c, true, log));
@@ -1411,6 +1450,20 @@ document.addEventListener("keydown", (e) => {
     }
     return;
   }
+
+  // Escape = clear commit selection
+  if (e.key === "Escape" && selectedCommits.size > 0) {
+    e.preventDefault();
+    clearSelection();
+    return;
+  }
+
+  // Delete/Backspace = delete selected commits
+  if ((e.key === "Delete" || e.key === "Backspace") && selectedCommits.size > 0 && !isEditorFocused) {
+    e.preventDefault();
+    showDeleteModal([...selectedCommits]);
+    return;
+  }
 });
 
 // ─── Revert to Commit ───
@@ -1427,6 +1480,11 @@ async function revertToCommit(commit) {
       hash: commit.hash,
       commitIndex: commit.index,
     });
+    if (result && result.noChange) {
+      showToast("already at that content");
+      exitNavMode();
+      return;
+    }
     if (result && result.log) {
       exitNavMode();
       setEditorContent(result.content);
@@ -1439,52 +1497,55 @@ async function revertToCommit(commit) {
   }
 }
 
-// ─── Squash Mode ───
+// ─── Commit Selection & Actions ───
 
-squashBtn.addEventListener("click", () => {
-  if (commitLog.length < 2) {
-    showToast("need at least 2 snapshots to squash");
-    return;
-  }
-  squashMode = !squashMode;
-  squashStart = null;
-  squashEnd = null;
-  squashConfirmBar.classList.add("hidden");
-  squashBtn.textContent = squashMode ? "cancel squash" : "squash";
-  if (squashMode) {
-    showToast("select first commit in range");
-  }
+function clearSelection() {
+  selectedCommits.clear();
+  lastSelectedIndex = null;
+  updateSelectionUI();
   renderCommits(commitLog);
-});
+}
 
-function handleSquashClick(commitIndex) {
-  if (squashStart === null) {
-    squashStart = commitIndex;
-    showToast("select last commit in range");
-    renderCommits(commitLog);
-  } else if (squashEnd === null) {
-    squashEnd = commitIndex;
-    if (squashStart === squashEnd) {
-      squashEnd = null;
-      showToast("select a different commit");
-      return;
-    }
-    const lo = Math.min(squashStart, squashEnd) + 1;
-    const hi = Math.max(squashStart, squashEnd) + 1;
-    squashConfirmText.textContent = "squash #" + lo + "\u2013#" + hi + "?";
-    squashConfirmBar.classList.remove("hidden");
-    renderCommits(commitLog);
+function updateSelectionUI() {
+  const count = selectedCommits.size;
+  if (count > 0) {
+    selectionActionBar.classList.remove("hidden");
+    selectionCountText.textContent = count + " selected";
+    squashSelectedBtn.disabled = count < 2;
+  } else {
+    selectionActionBar.classList.add("hidden");
   }
 }
 
-squashConfirmBtn.addEventListener("click", async () => {
-  if (squashStart === null || squashEnd === null) return;
+// ─── Squash via selection ───
+
+squashSelectedBtn.addEventListener("click", () => {
+  if (selectedCommits.size < 2) return;
   if (!gitClient || !currentDocId || !currentFilename) {
     showToast("squash unavailable");
     return;
   }
-  const fromIndex = Math.min(squashStart, squashEnd);
-  const toIndex = Math.max(squashStart, squashEnd);
+  const sorted = [...selectedCommits].sort((a, b) => a - b);
+  const latestIndex = sorted[sorted.length - 1];
+  const latestCommit = commitLog[latestIndex];
+  squashModalCount.textContent = sorted.length;
+  squashModalMessage.textContent = '"' + (latestCommit ? latestCommit.message : "") + '"';
+  squashHelpText.classList.add("hidden");
+  squashModal.classList.remove("hidden");
+});
+
+squashModalHelp.addEventListener("click", (e) => {
+  e.preventDefault();
+  squashHelpText.classList.toggle("hidden");
+});
+
+squashModalConfirm.addEventListener("click", async () => {
+  squashModal.classList.add("hidden");
+  const sorted = [...selectedCommits].sort((a, b) => a - b);
+  const fromIndex = sorted[0];
+  const toIndex = sorted[sorted.length - 1];
+  const latestCommit = commitLog[toIndex];
+  const message = latestCommit ? latestCommit.message : "";
   try {
     showToast("squashing\u2026");
     const result = await gitClient.squash({
@@ -1492,32 +1553,75 @@ squashConfirmBtn.addEventListener("click", async () => {
       filename: currentFilename,
       fromIndex,
       toIndex,
+      message,
     });
     if (result && result.log) {
-      squashMode = false;
-      squashStart = null;
-      squashEnd = null;
-      squashBtn.textContent = "squash";
-      squashConfirmBar.classList.add("hidden");
       exitNavMode();
       renderCommits(result.log);
       setEditorContent(result.content);
-      showToast("squashed " + (toIndex - fromIndex + 1) + " commits into 1");
-      // Full sync needed after history rewrite
+      showToast("squashed " + (toIndex - fromIndex + 1) + " snapshots into 1");
       if (syncClient) syncClient.fullSync();
     }
   } catch (err) {
     showToast("squash failed: " + err.message);
+  } finally {
+    clearSelection();
   }
 });
 
-squashCancelBtn.addEventListener("click", () => {
-  squashMode = false;
-  squashStart = null;
-  squashEnd = null;
-  squashBtn.textContent = "squash";
-  squashConfirmBar.classList.add("hidden");
-  renderCommits(commitLog);
+squashModalCancel.addEventListener("click", () => {
+  squashModal.classList.add("hidden");
+});
+
+// ─── Delete commits ───
+
+function showDeleteModal(indices) {
+  pendingDeleteIndices = indices;
+  deleteModalCount.textContent = indices.length;
+  deleteModal.classList.remove("hidden");
+}
+
+deleteModalConfirm.addEventListener("click", async () => {
+  deleteModal.classList.add("hidden");
+  if (!pendingDeleteIndices || !gitClient || !currentDocId || !currentFilename) {
+    showToast("delete unavailable");
+    return;
+  }
+  const indices = pendingDeleteIndices;
+  pendingDeleteIndices = null;
+  try {
+    showToast("deleting\u2026");
+    const result = await gitClient.deleteCommits({
+      docId: currentDocId,
+      filename: currentFilename,
+      indices,
+    });
+    if (result && result.log) {
+      exitNavMode();
+      renderCommits(result.log);
+      setEditorContent(result.content);
+      showToast("deleted " + indices.length + " snapshot" + (indices.length > 1 ? "s" : ""));
+      if (syncClient) syncClient.fullSync();
+    }
+  } catch (err) {
+    showToast("delete failed: " + err.message);
+  } finally {
+    clearSelection();
+  }
+});
+
+deleteModalCancel.addEventListener("click", () => {
+  deleteModal.classList.add("hidden");
+  pendingDeleteIndices = null;
+});
+
+deleteSelectedBtn.addEventListener("click", () => {
+  if (selectedCommits.size === 0) return;
+  showDeleteModal([...selectedCommits]);
+});
+
+clearSelectionBtn.addEventListener("click", () => {
+  clearSelection();
 });
 
 // ─── Drag-and-Drop Reorder ───
