@@ -4,20 +4,20 @@ import { showToast } from '../toast.js';
 import { escapeHtml } from '../views/dashboard.js';
 import { updateSelectionUI, clearSelection, showDeleteModal } from './selection.js';
 
-// Lazy handler for loadSnapshot to break circular dep with history-nav.js
-let _loadSnapshot = null;
-export function setCommitListHandlers({ loadSnapshot }) {
-  _loadSnapshot = loadSnapshot;
+// Lazy handler for showCommitDiff to break circular dep with history-nav.js
+let _showCommitDiff = null;
+export function setCommitListHandlers({ showCommitDiff }) {
+  _showCommitDiff = showCommitDiff;
 }
 
 const commitList = document.getElementById("commitList");
 const commitCountNum = document.getElementById("commitCountNum");
+const miniCommitCount = document.getElementById("miniCommitCount");
 
 export function createCommitItem(c, isNew, log) {
   const div = document.createElement("div");
   let cls = "commit-item";
   if (isNew) cls += " new";
-  if (state.historyPosition >= 0 && c.index === state.historyPosition) cls += " viewing";
   if (state.selectedCommits.has(c.index)) cls += " selected";
   div.className = cls;
   div.dataset.hash = c.hash;
@@ -29,7 +29,6 @@ export function createCommitItem(c, isNew, log) {
     '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
     '<div class="commit-time">#' + (c.index + 1) + '</div>' +
     '<div class="commit-actions">' +
-      (c.index < logLen - 1 ? '<button class="commit-revert-btn">revert</button>' : '') +
       (logLen > 1 ? '<button class="commit-delete-btn">delete</button>' : '') +
     '</div>';
   return div;
@@ -38,12 +37,10 @@ export function createCommitItem(c, isNew, log) {
 export function renderCommits(log, newHash) {
   state.commitLog = log;
   commitCountNum.textContent = log.length;
+  if (miniCommitCount) miniCommitCount.textContent = log.length + " snapshots";
 
-  // Update undo/redo button states — imported lazily to avoid circular dep
-  _updateNavButtons();
-
-  // Incremental update: prepend only the new commit (skip when selecting/nav mode)
-  if (newHash && commitList.children.length > 0 && state.selectedCommits.size === 0 && state.historyPosition === -1) {
+  // Incremental update: prepend only the new commit (skip when selecting)
+  if (newHash && commitList.children.length > 0 && state.selectedCommits.size === 0) {
     const c = log.find(entry => entry.hash === newHash);
     if (c) {
       commitList.prepend(createCommitItem(c, true, log));
@@ -61,31 +58,8 @@ export function renderCommits(log, newHash) {
   commitList.appendChild(fragment);
 }
 
-// Lazy nav button updater (history-nav calls renderCommits, renderCommits needs updateNavButtons)
-let _updateNavButtonsFn = null;
-export function setNavButtonUpdater(fn) {
-  _updateNavButtonsFn = fn;
-}
-function _updateNavButtons() {
-  if (_updateNavButtonsFn) _updateNavButtonsFn();
-}
-
 // Event delegation — single click listener on commit list
 commitList.addEventListener("click", async (e) => {
-  // Handle revert button clicks
-  if (e.target.classList.contains("commit-revert-btn")) {
-    e.stopPropagation();
-    const item = e.target.closest(".commit-item");
-    if (!item) return;
-    const index = parseInt(item.dataset.index, 10);
-    const c = state.commitLog[index];
-    if (c) {
-      const { revertToCommit } = await import('../views/editor.js');
-      await revertToCommit(c);
-    }
-    return;
-  }
-
   // Handle inline delete button clicks
   if (e.target.classList.contains("commit-delete-btn")) {
     e.stopPropagation();
@@ -125,16 +99,12 @@ commitList.addEventListener("click", async (e) => {
     return;
   }
 
-  // Plain click: clear selection and navigate
+  // Plain click: clear selection and show diff
   if (state.selectedCommits.size > 0) {
     clearSelection();
   }
 
-  // Navigate to this commit
-  state.historyPosition = index;
-  const { updateNavUI } = await import('./history-nav.js');
-  updateNavUI();
-  if (_loadSnapshot) await _loadSnapshot(state.commitLog[index]);
+  if (_showCommitDiff) await _showCommitDiff(state.commitLog[index]);
 });
 
 // Drag-and-drop delegation on commit list

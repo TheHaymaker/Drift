@@ -7,10 +7,6 @@ import('../views/editor.js').then(m => { _setEditorContent = m.setEditorContent;
 function setEditorContent(content) { _setEditorContent(content); }
 import { showToast } from '../toast.js';
 
-// Lazy import to avoid circular dep: commit-list → selection → history-nav → commit-list
-let _exitNavMode = () => {};
-import('./history-nav.js').then(m => { _exitNavMode = m.exitNavMode; });
-function exitNavMode() { _exitNavMode(); }
 
 const selectionActionBar = document.getElementById("selectionActionBar");
 const selectionCountText = document.getElementById("selectionCountText");
@@ -92,7 +88,7 @@ squashModalConfirm.addEventListener("click", async () => {
       message,
     });
     if (result && result.log) {
-      exitNavMode();
+
       renderCommits(result.log);
       setEditorContent(result.content);
       showToast("squashed " + (toIndex - fromIndex + 1) + " snapshots into 1");
@@ -127,7 +123,7 @@ deleteModalConfirm.addEventListener("click", async () => {
       indices,
     });
     if (result && result.log) {
-      exitNavMode();
+
       renderCommits(result.log);
       setEditorContent(result.content);
       showToast("deleted " + indices.length + " snapshot" + (indices.length > 1 ? "s" : ""));

@@ -38,6 +38,24 @@ const connDot = document.getElementById("connDot");
 const connLabel = document.getElementById("connLabel");
 const sylModeBtn = document.getElementById("sylModeBtn");
 const syllableEditorMount = document.getElementById("syllableEditorMount");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const sidebar = document.querySelector(".sidebar");
+const editorViewEl = document.getElementById("editorView");
+
+// Restore collapsed state from localStorage
+if (sidebar && sidebarToggle && editorViewEl) {
+  if (localStorage.getItem("sidebarCollapsed") === "true") {
+    sidebar.classList.add("collapsed");
+    editorViewEl.classList.add("sidebar-collapsed");
+    sidebarToggle.innerHTML = "&#9654;";
+  }
+  sidebarToggle.addEventListener("click", () => {
+    const collapsed = sidebar.classList.toggle("collapsed");
+    editorViewEl.classList.toggle("sidebar-collapsed", collapsed);
+    sidebarToggle.innerHTML = collapsed ? "&#9654;" : "&#9664;";
+    localStorage.setItem("sidebarCollapsed", collapsed);
+  });
+}
 
 export function setEditorEditable(editable) {
   editor.readOnly = !editable;
@@ -358,37 +376,6 @@ export function destroyLocalGit() {
   }
 }
 
-export async function revertToCommit(commit) {
-  if (!state.gitClient || !state.currentDocId || !state.currentFilename) {
-    showToast("revert unavailable");
-    return;
-  }
-  try {
-    const result = await state.gitClient.revertTo({
-      docId: state.currentDocId,
-      filename: state.currentFilename,
-      hash: commit.hash,
-      commitIndex: commit.index,
-    });
-    if (result && result.noChange) {
-      showToast("already at that content");
-      const { exitNavMode } = await import('../editor/history-nav.js');
-      exitNavMode();
-      return;
-    }
-    if (result && result.log) {
-      const { exitNavMode } = await import('../editor/history-nav.js');
-      exitNavMode();
-      setEditorContent(result.content);
-      renderCommits(result.log, result.hash);
-      showToast("reverted to #" + (commit.index + 1));
-      if (state.syncClient) state.syncClient.pushCommit({ hash: result.hash, message: result.message });
-    }
-  } catch (err) {
-    showToast("revert failed: " + err.message);
-  }
-}
-
 export async function reorderCommit(fromIndex, toIndex) {
   if (!state.gitClient || !state.currentDocId || !state.currentFilename) {
     showToast("reorder unavailable");
@@ -408,8 +395,6 @@ export async function reorderCommit(fromIndex, toIndex) {
       newOrder: order,
     });
     if (result && result.log) {
-      const { exitNavMode } = await import('../editor/history-nav.js');
-      exitNavMode();
       renderCommits(result.log);
       setEditorContent(result.content);
       showToast("commits reordered");
@@ -426,10 +411,6 @@ sylModeBtn.addEventListener("click", () => setSylMode(!state.sylModeActive));
 
 editor.addEventListener("input", () => {
   if (editor.readOnly) return;
-  // Exit navigation mode when user starts typing
-  if (state.historyPosition !== -1) {
-    import('../editor/history-nav.js').then(({ exitNavMode }) => exitNavMode());
-  }
   state.lastKeystroke = Date.now();
   state.isTyping = true;
   status.textContent = "writing";
@@ -532,7 +513,6 @@ editor.addEventListener("blur", () => {
 editor.addEventListener("focus", async () => {
   if (!state.currentDocId) return;
   document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
-  import('../editor/history-nav.js').then(({ exitNavMode }) => exitNavMode());
   if (state.gitClient && state.currentDocId && state.currentFilename) {
     try {
       const result = await state.gitClient.readFile({ docId: state.currentDocId, filename: state.currentFilename });

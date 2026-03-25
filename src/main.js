@@ -16,10 +16,9 @@ import "./editor/selection.js";
 import "./editor/diff-panel.js";
 
 // Wire up lazy handler to break commit-list ↔ history-nav circular dep
-import { setCommitListHandlers, setNavButtonUpdater } from "./editor/commit-list.js";
-import { loadSnapshot, updateNavButtons } from "./editor/history-nav.js";
-setCommitListHandlers({ loadSnapshot });
-setNavButtonUpdater(updateNavButtons);
+import { setCommitListHandlers } from "./editor/commit-list.js";
+import { showCommitDiff } from "./editor/history-nav.js";
+setCommitListHandlers({ showCommitDiff });
 
 // Apply preferences immediately (prevents theme flash)
 initPreferences();

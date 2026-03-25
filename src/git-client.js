@@ -90,9 +90,6 @@ export function createGitClient() {
     setThreshold(params) {
       return send("setThreshold", params);
     },
-    revertTo(params) {
-      return send("revertTo", params);
-    },
     squash(params) {
       return send("squash", params);
     },

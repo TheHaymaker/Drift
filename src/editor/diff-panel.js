@@ -1,13 +1,5 @@
 // src/editor/diff-panel.js
 
-// Lazy import to avoid circular dep: history-nav → diff-panel → history-nav
-let _exitNavMode = () => {};
-let _restoreHeadContent = async () => {};
-import('./history-nav.js').then(m => {
-  _exitNavMode = m.exitNavMode;
-  _restoreHeadContent = m.restoreHeadContent;
-});
-
 const diffPanel = document.getElementById("diffPanel");
 const diffTitle = document.getElementById("diffTitle");
 const diffBody = document.getElementById("diffBody");
@@ -32,9 +24,8 @@ export function renderDiff(segments, commit) {
   diffPanel.classList.remove("hidden");
 }
 
-export async function closeDiff() {
-  _exitNavMode();
-  await _restoreHeadContent();
+export function closeDiff() {
+  diffPanel.classList.add("hidden");
 }
 
 diffClose.addEventListener("click", closeDiff);

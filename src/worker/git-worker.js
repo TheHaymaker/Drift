@@ -411,44 +411,6 @@ async function handleSetThreshold({ docId, value }) {
   return { ok: true, value: doc.pauseThreshold };
 }
 
-// ─── Revert to a specific commit ───
-
-async function handleRevertTo({ docId, filename, hash, commitIndex }) {
-  const doc = getDoc(docId);
-  if (!doc) throw new Error(`doc ${docId} not initialized`);
-  clearTimeout(doc.pauseTimer);
-  const { fs: lfs, dir } = doc;
-
-  // Read the content at the target commit
-  const snap = await handleGetFileAt({ docId, filename, hash });
-  const content = snap.content;
-
-  // Write the reverted content
-  await lfs.promises.writeFile(`${dir}/${filename}`, content);
-  await git.add({ fs: lfs, dir, filepath: filename });
-
-  // Check if there's actually a change from current HEAD
-  const matrix = await git.statusMatrix({ fs: lfs, dir });
-  const hasChanges = matrix.some(
-    ([, head, workdir, stage]) => head !== stage || head !== workdir
-  );
-  if (!hasChanges) {
-    return { noChange: true };
-  }
-
-  const message = `revert to #${commitIndex + 1} (${hash})`;
-  const newOid = await git.commit({ fs: lfs, dir, message, author });
-  doc.lastContent = content;
-
-  const log = await getLogInternal(lfs, dir, docId);
-  return {
-    hash: newOid.slice(0, 7),
-    message,
-    content,
-    log,
-  };
-}
-
 // ─── Squash commits (history rewrite) ───
 
 async function handleSquash({ docId, filename, fromIndex, toIndex, message }) {
@@ -489,7 +451,6 @@ const handlers = {
   getStructuredDiff: handleGetStructuredDiff,
   clone: handleClone,
   setThreshold: handleSetThreshold,
-  revertTo: handleRevertTo,
   squash: handleSquash,
   deleteCommits: handleDeleteCommits,
   reorder: handleReorder,
