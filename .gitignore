@@ -3,3 +3,4 @@ poem-repo/
 poem-atoms.json
 data/
 dist/
+.claude/
