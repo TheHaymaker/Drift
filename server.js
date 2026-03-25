@@ -315,6 +315,7 @@ app.get("/api/documents/:docId/playback", requireAuth, async (req, res) => {
         message: c.message,
         date: c.date || "",
         lines,
+        html: raw,
       });
     }
     res.json({ commits });
