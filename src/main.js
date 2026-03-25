@@ -8,6 +8,56 @@ import { contentToHtml, stripHtml } from "./htmlUtils.js";
 import { createGitClient } from "./git-client.js";
 import { createSyncClient } from "./sync.js";
 
+// ─── Theme & Preferences ───
+
+const FONT_MAP = {
+  'garamond': "'EB Garamond', Georgia, serif",
+  'lora': "'Lora', Georgia, serif",
+  'plex-mono': "'IBM Plex Mono', 'JetBrains Mono', monospace",
+};
+
+function applyTheme(pref) {
+  document.documentElement.setAttribute('data-theme', pref);
+  localStorage.setItem('drift-theme', pref);
+}
+
+function applyFont(key) {
+  const family = FONT_MAP[key] || FONT_MAP['garamond'];
+  document.documentElement.style.setProperty('--font-body', family);
+  localStorage.setItem('drift-font-family', key);
+}
+
+function applyEditorFontSize(rem) {
+  document.documentElement.style.setProperty('--font-editor-size', rem + 'rem');
+  localStorage.setItem('drift-editor-font-size', rem);
+}
+
+function applyPlaybackFontSize(rem) {
+  document.documentElement.style.setProperty('--font-playback-size', rem + 'rem');
+  localStorage.setItem('drift-playback-font-size', rem);
+}
+
+function initPreferences() {
+  // Theme
+  const theme = localStorage.getItem('drift-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+
+  // Font family
+  const fontKey = localStorage.getItem('drift-font-family') || 'garamond';
+  const family = FONT_MAP[fontKey] || FONT_MAP['garamond'];
+  document.documentElement.style.setProperty('--font-body', family);
+
+  // Font sizes
+  const editorSize = localStorage.getItem('drift-editor-font-size') || '1.45';
+  document.documentElement.style.setProperty('--font-editor-size', editorSize + 'rem');
+
+  const playbackSize = localStorage.getItem('drift-playback-font-size') || '1.45';
+  document.documentElement.style.setProperty('--font-playback-size', playbackSize + 'rem');
+}
+
+// Apply preferences immediately to prevent flash
+initPreferences();
+
 // ─── Browser git capability detection ───
 const canUseLocalGit =
   typeof Worker !== "undefined" && typeof indexedDB !== "undefined";
@@ -24,6 +74,7 @@ function mountPlayback(docId) {
   document.getElementById("landingView").classList.add("hidden");
   document.getElementById("dashboardView").classList.add("hidden");
   document.getElementById("editorView").classList.add("hidden");
+  document.getElementById("settingsView").classList.add("hidden");
   document.getElementById("connStatus").classList.add("hidden");
   playbackContainer.classList.remove("hidden");
   document.title = "drift \u2014 playback";
@@ -78,6 +129,7 @@ function showAuth() {
   landingView.classList.add("hidden");
   dashboardView.classList.add("hidden");
   editorView.classList.add("hidden");
+  settingsView.classList.add("hidden");
   connStatus.classList.add("hidden");
   authError.textContent = "";
   authUsername.focus();
@@ -133,6 +185,7 @@ logoutBtn.addEventListener("click", async () => {
 const landingView = document.getElementById("landingView");
 const dashboardView = document.getElementById("dashboardView");
 const editorView = document.getElementById("editorView");
+const settingsView = document.getElementById("settingsView");
 const connStatus = document.getElementById("connStatus");
 const docList = document.getElementById("docList");
 const newPoemBtn = document.getElementById("newPoemBtn");
@@ -170,7 +223,7 @@ const syllableEditorMount = document.getElementById("syllableEditorMount");
 
 let ws;
 let currentDocId = null;
-let pauseThreshold = 3000;
+let pauseThreshold = parseInt(localStorage.getItem('drift-default-threshold')) || 3000;
 let lastKeystroke = 0;
 let animFrame;
 let isTyping = false;
@@ -331,6 +384,7 @@ function getRoute() {
   const readMatch = hash.match(/^#\/read\/(.+)$/);
   if (readMatch) return { view: "read", docId: readMatch[1] };
   if (hash === "#/poems") return { view: "dashboard" };
+  if (hash === "#/settings") return { view: "settings" };
   return { view: "landing" };
 }
 
@@ -375,6 +429,8 @@ async function route() {
       showEditor(r.docId);
     } else if (r.view === "dashboard") {
       showDashboard();
+    } else if (r.view === "settings") {
+      showSettings();
     } else {
       showLanding();
     }
@@ -391,6 +447,7 @@ function showLanding() {
   landingView.classList.remove("hidden");
   dashboardView.classList.add("hidden");
   editorView.classList.add("hidden");
+  settingsView.classList.add("hidden");
   connStatus.classList.add("hidden");
   document.title = "drift \u2014 where every pause is a verse";
   updateLandingNav();
@@ -628,6 +685,7 @@ function showDashboard() {
   landingView.classList.add("hidden");
   dashboardView.classList.remove("hidden");
   editorView.classList.add("hidden");
+  settingsView.classList.add("hidden");
   connStatus.classList.add("hidden");
   document.title = "drift";
   if (currentUser) {
@@ -635,6 +693,112 @@ function showDashboard() {
   }
   loadDocList();
 }
+
+// ─── Settings ───
+
+function showSettings() {
+  disconnectWs();
+  currentDocId = null;
+  landingView.classList.add("hidden");
+  dashboardView.classList.add("hidden");
+  editorView.classList.add("hidden");
+  settingsView.classList.remove("hidden");
+  connStatus.classList.add("hidden");
+  playbackContainer.classList.add("hidden");
+  document.title = "drift — settings";
+  populateSettings();
+}
+
+function populateSettings() {
+  // Theme
+  const theme = localStorage.getItem('drift-theme') || 'dark';
+  setActiveSegmented('themePicker', theme);
+
+  // Font
+  const font = localStorage.getItem('drift-font-family') || 'garamond';
+  setActiveFont('fontPicker', font);
+
+  // Editor font size
+  const editorSize = localStorage.getItem('drift-editor-font-size') || '1.45';
+  const editorSlider = document.getElementById('settingsEditorSizeSlider');
+  const editorLabel = document.getElementById('settingsEditorSizeValue');
+  editorSlider.value = editorSize;
+  editorLabel.textContent = editorSize + 'rem';
+
+  // Playback font size
+  const playbackSize = localStorage.getItem('drift-playback-font-size') || '1.45';
+  const playbackSlider = document.getElementById('settingsPlaybackSizeSlider');
+  const playbackLabel = document.getElementById('settingsPlaybackSizeValue');
+  playbackSlider.value = playbackSize;
+  playbackLabel.textContent = playbackSize + 'rem';
+
+  // Threshold
+  const threshold = localStorage.getItem('drift-default-threshold') || '3000';
+  const threshSlider = document.getElementById('settingsThresholdSlider');
+  const threshLabel = document.getElementById('settingsThresholdValue');
+  threshSlider.value = threshold;
+  threshLabel.textContent = (parseInt(threshold) / 1000).toFixed(1) + 's';
+
+  // Speed
+  const speedIdx = localStorage.getItem('drift-default-speed') || '1';
+  setActiveSegmented('speedPicker', speedIdx);
+}
+
+function setActiveSegmented(pickerId, value) {
+  const picker = document.getElementById(pickerId);
+  if (!picker) return;
+  for (const btn of picker.children) {
+    btn.classList.toggle('active', btn.dataset.value === String(value));
+  }
+}
+
+function setActiveFont(pickerId, value) {
+  const picker = document.getElementById(pickerId);
+  if (!picker) return;
+  for (const btn of picker.children) {
+    btn.classList.toggle('active', btn.dataset.value === String(value));
+  }
+}
+
+// Settings event listeners
+document.getElementById('themePicker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-value]');
+  if (!btn) return;
+  applyTheme(btn.dataset.value);
+  setActiveSegmented('themePicker', btn.dataset.value);
+});
+
+document.getElementById('fontPicker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-value]');
+  if (!btn) return;
+  applyFont(btn.dataset.value);
+  setActiveFont('fontPicker', btn.dataset.value);
+});
+
+document.getElementById('settingsEditorSizeSlider')?.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value).toFixed(2);
+  document.getElementById('settingsEditorSizeValue').textContent = val + 'rem';
+  applyEditorFontSize(val);
+});
+
+document.getElementById('settingsPlaybackSizeSlider')?.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value).toFixed(2);
+  document.getElementById('settingsPlaybackSizeValue').textContent = val + 'rem';
+  applyPlaybackFontSize(val);
+});
+
+document.getElementById('settingsThresholdSlider')?.addEventListener('input', (e) => {
+  const val = parseInt(e.target.value);
+  document.getElementById('settingsThresholdValue').textContent = (val / 1000).toFixed(1) + 's';
+  localStorage.setItem('drift-default-threshold', val);
+});
+
+document.getElementById('speedPicker')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-value]');
+  if (!btn) return;
+  localStorage.setItem('drift-default-speed', btn.dataset.value);
+  setActiveSegmented('speedPicker', btn.dataset.value);
+});
 
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -797,6 +961,7 @@ function showEditor(docId, readOnly) {
   landingView.classList.add("hidden");
   dashboardView.classList.add("hidden");
   editorView.classList.remove("hidden");
+  settingsView.classList.add("hidden");
   connStatus.classList.remove("hidden");
   editor.readOnly = !!readOnly;
   editor.style.display = "none"; // always hidden — rich editor replaces it

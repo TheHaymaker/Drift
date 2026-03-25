@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@300;400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@300;400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
 
 :root {
   --bg: #141210;
@@ -11,6 +11,8 @@
   --green: #4ade80;
   --red: #f87171;
   --amber: #fbbf24;
+  --bg-overlay: rgba(20, 18, 16, 0.9);
+  --bg-overlay-strong: rgba(26, 24, 20, 0.96);
 
   /* Rhyme group palette */
   --rhyme-a: #7eb8da;
@@ -20,6 +22,59 @@
   --rhyme-e: #6bc9a8;
   --rhyme-f: #d4789c;
   --rhyme-g: #8baa5c;
+
+  /* Font settings */
+  --font-body: 'EB Garamond', Georgia, serif;
+  --font-editor-size: 1.45rem;
+  --font-playback-size: 1.45rem;
+}
+
+/* ─── Light Theme ─── */
+[data-theme="light"] {
+  --bg: #fafafa;
+  --bg-raised: #f0f0f0;
+  --border: #d8d8d8;
+  --text: #1a1a1a;
+  --text-dim: #6a6a6a;
+  --text-faint: #a0a0a0;
+  --accent: #5a5a5a;
+  --green: #16a34a;
+  --red: #dc2626;
+  --amber: #d97706;
+  --bg-overlay: rgba(250, 250, 250, 0.9);
+  --bg-overlay-strong: rgba(240, 240, 240, 0.96);
+  --rhyme-a: #2e7aaa;
+  --rhyme-b: #c4503a;
+  --rhyme-c: #6a50b0;
+  --rhyme-d: #8a7520;
+  --rhyme-e: #2a8a68;
+  --rhyme-f: #a84868;
+  --rhyme-g: #5a7a2a;
+}
+
+/* ─── System Theme ─── */
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    --bg: #fafafa;
+    --bg-raised: #f0f0f0;
+    --border: #d8d8d8;
+    --text: #1a1a1a;
+    --text-dim: #6a6a6a;
+    --text-faint: #a0a0a0;
+    --accent: #5a5a5a;
+    --green: #16a34a;
+    --red: #dc2626;
+    --amber: #d97706;
+    --bg-overlay: rgba(250, 250, 250, 0.9);
+    --bg-overlay-strong: rgba(240, 240, 240, 0.96);
+    --rhyme-a: #2e7aaa;
+    --rhyme-b: #c4503a;
+    --rhyme-c: #6a50b0;
+    --rhyme-d: #8a7520;
+    --rhyme-e: #2a8a68;
+    --rhyme-f: #a84868;
+    --rhyme-g: #5a7a2a;
+  }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +82,7 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -230,7 +285,7 @@ body {
 }
 
 .doc-title-input {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1rem;
   color: var(--text);
   background: var(--bg);
@@ -360,8 +415,8 @@ textarea {
   border: none;
   outline: none;
   color: var(--text);
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.45rem;
+  font-family: var(--font-body);
+  font-size: var(--font-editor-size);
   line-height: 2;
   letter-spacing: 0.01em;
   caret-color: var(--accent);
@@ -507,7 +562,7 @@ textarea::selection {
 }
 
 .commit-msg {
-  font-family: 'EB Garamond', serif;
+  font-family: var(--font-body);
   font-size: 0.82rem;
   color: var(--text-dim);
   font-style: italic;
@@ -861,8 +916,8 @@ input[type="range"]::-webkit-slider-thumb {
 .diff-body {
   flex: 1;
   overflow-y: auto;
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.45rem;
+  font-family: var(--font-body);
+  font-size: var(--font-editor-size);
   line-height: 2;
   letter-spacing: 0.01em;
   white-space: pre-wrap;
@@ -918,13 +973,13 @@ input[type="range"]::-webkit-slider-thumb {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(20, 18, 16, 0.9);
+  background: var(--bg-overlay);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
 }
 
 .landing-logo {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.3rem;
   color: var(--text);
   letter-spacing: 0.02em;
@@ -977,7 +1032,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-hero-heading {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 4rem;
   font-weight: 400;
   line-height: 1.15;
@@ -991,7 +1046,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-hero-sub {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.15rem;
   line-height: 1.8;
   color: var(--text-dim);
@@ -1023,7 +1078,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-process-heading {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 2.8rem;
   font-weight: 400;
   line-height: 1.2;
@@ -1053,7 +1108,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-step-title {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.1rem;
   font-style: italic;
   font-weight: 500;
@@ -1062,7 +1117,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-step-desc {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 0.95rem;
   line-height: 1.7;
   color: var(--text-dim);
@@ -1125,7 +1180,7 @@ input[type="range"]::-webkit-slider-thumb {
   position: absolute;
   top: -14px;
   left: 16px;
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1rem;
   color: var(--accent);
   background: var(--bg-raised);
@@ -1135,7 +1190,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-pull-quote p {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 0.9rem;
   font-style: italic;
   line-height: 1.6;
@@ -1151,7 +1206,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-demo-heading {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 2.4rem;
   font-weight: 400;
   text-align: center;
@@ -1160,7 +1215,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-demo-sub {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1rem;
   color: var(--text-dim);
   text-align: center;
@@ -1221,7 +1276,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-right: 1px solid var(--border);
   outline: none;
   color: var(--text);
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.35rem;
   line-height: 2;
   letter-spacing: 0.01em;
@@ -1303,7 +1358,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .demo-commit-msg {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 0.82rem;
   color: var(--text-dim);
   font-style: italic;
@@ -1465,14 +1520,14 @@ input[type="range"]::-webkit-slider-thumb {
   height: 36px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1rem;
   color: var(--accent);
   margin-bottom: 20px;
 }
 
 .landing-feature-title {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.15rem;
   font-weight: 500;
   color: var(--text);
@@ -1480,7 +1535,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-feature-desc {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 0.9rem;
   line-height: 1.65;
   color: var(--text-dim);
@@ -1496,7 +1551,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-cta-heading {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 2.8rem;
   font-weight: 400;
   color: var(--accent);
@@ -1504,7 +1559,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .landing-cta-sub {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.05rem;
   line-height: 1.7;
   color: var(--text-dim);
@@ -1684,7 +1739,7 @@ input[type="range"]::-webkit-slider-thumb {
   display: flex;
   flex-direction: column;
   height: 100%;
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.25rem;
   color: var(--text);
 }
@@ -1814,7 +1869,7 @@ input[type="range"]::-webkit-slider-thumb {
   border: none;
   outline: none;
   color: var(--text);
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.25rem;
   line-height: 2;
   letter-spacing: 0.01em;
@@ -2294,8 +2349,8 @@ input[type="range"]::-webkit-slider-thumb {
   border: none;
   outline: none;
   color: var(--text);
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 1.45rem;
+  font-family: var(--font-body);
+  font-size: var(--font-editor-size);
   line-height: 2;
   letter-spacing: 0.01em;
   caret-color: var(--accent);
@@ -2309,7 +2364,7 @@ input[type="range"]::-webkit-slider-thumb {
   border: none;
   outline: none;
   color: var(--text);
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   font-size: 1.25rem;
   line-height: 2;
   letter-spacing: 0.01em;
@@ -2350,7 +2405,7 @@ input[type="range"]::-webkit-slider-thumb {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: rgba(26, 24, 20, 0.96);
+  background: var(--bg-overlay-strong);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px 5px;
@@ -2365,7 +2420,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.82rem;
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-body);
   line-height: 1;
   transition: color 0.15s, background 0.15s;
 }
@@ -2385,4 +2440,337 @@ input[type="range"]::-webkit-slider-thumb {
   height: 14px;
   background: var(--border);
   margin: 0 3px;
+}
+
+/* ─── Light theme grain adjustment ─── */
+[data-theme="light"] .grain { opacity: 0.015; }
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] .grain { opacity: 0.015; }
+}
+
+/* ─── Settings Gear Icon ─── */
+.settings-gear {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  text-decoration: none;
+  padding: 4px;
+  letter-spacing: 0.06em;
+  transition: color 0.2s;
+}
+.settings-gear:hover { color: var(--text-dim); }
+
+.dashboard-header .settings-gear {
+  position: absolute;
+  right: 70px;
+  top: 4px;
+}
+
+.sidebar .settings-gear {
+  display: block;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* ─── Settings View ─── */
+.settings-view {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 80px 32px;
+}
+
+.settings-view .dashboard-header {
+  margin-bottom: 40px;
+}
+
+.settings-section {
+  margin-bottom: 32px;
+}
+
+.settings-section .setting-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.settings-section .setting-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--accent);
+  float: right;
+}
+
+.settings-section .setting-row {
+  margin-bottom: 10px;
+}
+
+.settings-section input[type="range"] {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.segmented-group {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.segmented-btn {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.segmented-btn:last-child { border-right: none; }
+.segmented-btn:hover { background: rgba(160, 140, 106, 0.06); }
+.segmented-btn.active {
+  background: rgba(160, 140, 106, 0.12);
+  color: var(--accent);
+}
+
+.font-btn {
+  flex: 1;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.font-btn:last-child { border-right: none; }
+.font-btn:hover { background: rgba(160, 140, 106, 0.06); }
+.font-btn.active {
+  background: rgba(160, 140, 106, 0.12);
+  color: var(--accent);
+}
+
+.settings-back {
+  display: inline-block;
+  margin-top: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.settings-back:hover { color: var(--text-dim); }
+
+/* ─── Playback CSS Classes ─── */
+.playback-container {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 20px 80px;
+}
+
+.playback-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 25% 15%, rgba(160,140,106,0.04) 0%, transparent 50%);
+}
+
+.playback-header {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 36px;
+  z-index: 1;
+}
+
+.playback-brand {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.playback-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.playback-commit-bar {
+  width: 100%;
+  max-width: 580px;
+  margin-top: 16px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  z-index: 1;
+}
+
+.playback-commit-info {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.playback-commit-hash { color: var(--accent); }
+.playback-commit-date { color: var(--text-faint); font-size: 0.62rem; }
+.playback-commit-count { color: var(--text-faint); font-size: 0.6rem; opacity: 0.7; }
+
+.playback-commit-message {
+  margin-top: 4px;
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 0.86rem;
+  color: var(--text-dim);
+}
+
+.playback-controls {
+  width: 100%;
+  max-width: 580px;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 1;
+}
+
+.playback-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.playback-dot {
+  height: 3px;
+  border-radius: 2px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.4s ease;
+}
+.playback-dot--active { width: 24px; background: var(--accent); }
+.playback-dot--visited { width: 12px; background: var(--text-faint); }
+.playback-dot--future { width: 12px; background: var(--border); }
+
+.playback-btn-row { display: flex; gap: 8px; }
+
+.playback-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.playback-btn--default {
+  border: 1px solid var(--text-faint);
+  background: transparent;
+  color: var(--text-dim);
+}
+.playback-btn--active {
+  border: 1px solid var(--accent);
+  background: rgba(160,140,106,0.12);
+  color: var(--accent);
+}
+
+.playback-speed-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.playback-speed-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--accent);
+  min-width: 32px;
+  text-align: center;
+}
+
+.playback-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.54rem;
+  color: var(--text-faint);
+  opacity: 0.7;
+}
+
+.playback-loading {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+}
+
+.playback-error {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  font-family: var(--font-body);
+}
+
+.playback-error-message {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 1.1rem;
+}
+
+.playback-error-back {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.playback-settings-gear {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  z-index: 10;
 }
