@@ -12,6 +12,7 @@ import LightningFS from "@isomorphic-git/lightning-fs";
 // ─── Per-document state ───
 
 const docs = new Map(); // Map<docId, { fs, dir, filename, lastContent, pauseTimer, pauseThreshold }>
+const oidCache = new Map(); // Map<docId, Map<shortHash, fullOid>>
 
 function getDoc(docId) {
   return docs.get(docId);
@@ -21,6 +22,7 @@ function getOrCreateFS(docId) {
   if (!docs.has(docId)) {
     const fs = new LightningFS(`drift-${docId}`);
     docs.set(docId, {
+      docId,
       fs,
       dir: `/${docId}`,
       filename: null,
@@ -269,22 +271,33 @@ async function doCommit(doc, filename, message, content) {
 
   await git.add({ fs: lfs, dir, filepath: filename });
 
-  // Double-check staged changes
-  const matrix = await git.statusMatrix({ fs: lfs, dir });
-  const hasChanges = matrix.some(
-    ([, head, workdir, stage]) => head !== stage || head !== workdir
-  );
-  if (!hasChanges) return null;
+  // Compare staged content against HEAD blob — skip if identical
+  try {
+    const headOid = await git.resolveRef({ fs: lfs, dir, ref: "HEAD" });
+    const { blob: headBlob } = await git.readBlob({
+      fs: lfs, dir, oid: headOid, filepath: filename,
+    });
+    const currentBytes = await lfs.promises.readFile(`${dir}/${filename}`);
+    if (headBlob.length === currentBytes.length &&
+        headBlob.every((b, i) => b === currentBytes[i])) {
+      return null; // no change from HEAD
+    }
+  } catch {
+    // HEAD doesn't exist or file is new — proceed with commit
+  }
 
   const hash = await git.commit({ fs: lfs, dir, message, author });
-  doc.lastContent =
-    content !== undefined
-      ? content
-      : new TextDecoder().decode(
-          await lfs.promises.readFile(`${dir}/${filename}`)
-        );
+  doc.lastContent = new TextDecoder().decode(
+    await lfs.promises.readFile(`${dir}/${filename}`)
+  );
 
-  const log = await getLogInternal(lfs, dir);
+  // Cache the new commit OID
+  if (doc.docId) {
+    if (!oidCache.has(doc.docId)) oidCache.set(doc.docId, new Map());
+    oidCache.get(doc.docId).set(hash.slice(0, 7), hash);
+  }
+
+  const log = await getLogInternal(lfs, dir, doc.docId);
   return {
     hash: hash.slice(0, 7),
     message,
@@ -341,10 +354,10 @@ async function handleReadFile({ docId, filename }) {
   }
 }
 
-async function getLogInternal(lfs, dir) {
+async function getLogInternal(lfs, dir, docId) {
   try {
     const commits = await git.log({ fs: lfs, dir });
-    return commits
+    const result = commits
       .reverse()
       .map((c, i) => ({
         hash: c.oid.slice(0, 7),
@@ -352,6 +365,17 @@ async function getLogInternal(lfs, dir) {
         message: c.commit.message.trim(),
         index: i,
       }));
+
+    // Populate OID cache
+    if (docId) {
+      if (!oidCache.has(docId)) oidCache.set(docId, new Map());
+      const cache = oidCache.get(docId);
+      for (const c of commits) {
+        cache.set(c.oid.slice(0, 7), c.oid);
+      }
+    }
+
+    return result;
   } catch {
     return [];
   }
@@ -360,7 +384,7 @@ async function getLogInternal(lfs, dir) {
 async function handleGetLog({ docId }) {
   const doc = getDoc(docId);
   if (!doc) throw new Error(`doc ${docId} not initialized`);
-  const log = await getLogInternal(doc.fs, doc.dir);
+  const log = await getLogInternal(doc.fs, doc.dir, docId);
   return { log };
 }
 
@@ -370,15 +394,20 @@ async function handleGetFileAt({ docId, filename, hash }) {
   const { fs: lfs, dir } = doc;
 
   try {
-    // Resolve short hash to full oid
-    const log = await git.log({ fs: lfs, dir });
-    const match = log.find((c) => c.oid.startsWith(hash));
-    if (!match) return { content: "" };
+    // Resolve short hash via cache, then expandOid — avoids full log walk
+    let oid = oidCache.get(docId)?.get(hash);
+    if (!oid) {
+      try {
+        oid = await git.expandOid({ fs: lfs, dir, oid: hash });
+      } catch {
+        return { content: "" };
+      }
+    }
 
     const { blob } = await git.readBlob({
       fs: lfs,
       dir,
-      oid: match.oid,
+      oid,
       filepath: filename,
     });
     return { content: new TextDecoder().decode(blob) };

@@ -917,97 +917,93 @@ animFrame = requestAnimationFrame(updateRing);
 
 // ─── Commits ───
 
+function createCommitItem(c, isNew) {
+  const div = document.createElement("div");
+  div.className = "commit-item" + (isNew ? " new" : "");
+  div.dataset.hash = c.hash;
+  div.dataset.index = c.index;
+  div.innerHTML =
+    '<div class="commit-hash">' + c.hash + '</div>' +
+    '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
+    '<div class="commit-time">#' + (c.index + 1) + '</div>';
+  return div;
+}
+
+async function fetchSnapshot(hash) {
+  if (gitClient && currentDocId && currentFilename) {
+    try {
+      const snap = await gitClient.getFileAt({ docId: currentDocId, filename: currentFilename, hash });
+      return snap.content;
+    } catch { /* fall through */ }
+  }
+  const d = await fetch("/api/documents/" + currentDocId + "/snapshot/" + hash).then(r => r.json());
+  return d.content;
+}
+
+async function fetchDiff(hashA, hashB) {
+  if (gitClient && currentDocId && currentFilename) {
+    try {
+      const result = await gitClient.getStructuredDiff({ docId: currentDocId, filename: currentFilename, hashA, hashB });
+      return result.segments;
+    } catch { /* fall through */ }
+  }
+  const d = await fetch("/api/documents/" + currentDocId + "/structured-diff/" + hashA + "/" + hashB).then(r => r.json());
+  return d.segments;
+}
+
+// Event delegation — single click listener on commit list
+commitList.addEventListener("click", async (e) => {
+  const item = e.target.closest(".commit-item");
+  if (!item) return;
+
+  const hash = item.dataset.hash;
+  const index = parseInt(item.dataset.index, 10);
+
+  document.querySelectorAll(".commit-item.active").forEach(el => el.classList.remove("active"));
+  item.classList.add("active");
+
+  if (index > 0) {
+    const prev = commitLog[index - 1];
+    // Fetch snapshot and diff in parallel
+    const [snapContent, diffSegments] = await Promise.all([
+      fetchSnapshot(hash),
+      fetchDiff(prev.hash, hash),
+    ]);
+    setEditorContent(snapContent);
+    showToast("viewing " + hash);
+    renderDiff(diffSegments, { hash, message: commitLog[index].message });
+  } else {
+    const snapContent = await fetchSnapshot(hash);
+    setEditorContent(snapContent);
+    showToast("viewing " + hash);
+    renderDiff(snapContent ? [{ type: "added", text: snapContent }] : [], { hash, message: commitLog[index].message });
+  }
+});
+
 function renderCommits(log, newHash) {
   commitLog = log;
   commitCountNum.textContent = log.length;
-  commitList.innerHTML = "";
 
+  // Incremental update: prepend only the new commit
+  if (newHash && commitList.children.length > 0) {
+    const c = log.find(entry => entry.hash === newHash);
+    if (c) {
+      commitList.prepend(createCommitItem(c, true));
+      return;
+    }
+  }
+
+  // Full rebuild with DocumentFragment
+  const fragment = document.createDocumentFragment();
   const reversed = [...log].reverse();
   for (const c of reversed) {
-    const div = document.createElement("div");
-    div.className = "commit-item" + (c.hash === newHash ? " new" : "");
-    div.innerHTML =
-      '<div class="commit-hash">' + c.hash + '</div>' +
-      '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
-      '<div class="commit-time">#' + (c.index + 1) + '</div>';
-    div.addEventListener("click", async () => {
-      document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
-      div.classList.add("active");
-
-      // Fetch snapshot — prefer local git
-      if (gitClient && currentDocId && currentFilename) {
-        try {
-          const snap = await gitClient.getFileAt({ docId: currentDocId, filename: currentFilename, hash: c.hash });
-          setEditorContent(snap.content);
-          showToast("viewing " + c.hash);
-        } catch {
-          // Fall back to server
-          const d = await fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash).then(r => r.json());
-          setEditorContent(d.content);
-          showToast("viewing " + c.hash);
-        }
-      } else {
-        fetch("/api/documents/" + currentDocId + "/snapshot/" + c.hash)
-          .then(r => r.json())
-          .then(d => {
-            setEditorContent(d.content);
-            showToast("viewing " + c.hash);
-          });
-      }
-
-      // Fetch and show diff — prefer local git
-      if (c.index > 0) {
-        const prev = log[c.index - 1];
-        if (gitClient && currentDocId && currentFilename) {
-          try {
-            const diffResult = await gitClient.getStructuredDiff({ docId: currentDocId, filename: currentFilename, hashA: prev.hash, hashB: c.hash });
-            renderDiff(diffResult.segments, c);
-          } catch {
-            fetchAndShowDiff(prev.hash, c.hash, c);
-          }
-        } else {
-          fetchAndShowDiff(prev.hash, c.hash, c);
-        }
-      } else {
-        if (gitClient && currentDocId && currentFilename) {
-          try {
-            const snap = await gitClient.getFileAt({ docId: currentDocId, filename: currentFilename, hash: c.hash });
-            renderDiff(snap.content ? [{ type: "added", text: snap.content }] : [], c);
-          } catch {
-            showFirstCommitDiff(c.hash, c);
-          }
-        } else {
-          showFirstCommitDiff(c.hash, c);
-        }
-      }
-    });
-    commitList.appendChild(div);
+    fragment.appendChild(createCommitItem(c, c.hash === newHash));
   }
+  commitList.innerHTML = "";
+  commitList.appendChild(fragment);
 }
 
 // ─── Diff panel ───
-
-function fetchAndShowDiff(hashA, hashB, commit) {
-  fetch("/api/documents/" + currentDocId + "/structured-diff/" + hashA + "/" + hashB)
-    .then(r => r.json())
-    .then(d => {
-      renderDiff(d.segments, commit);
-    })
-    .catch(() => {
-      diffPanel.classList.add("hidden");
-    });
-}
-
-function showFirstCommitDiff(hash, commit) {
-  fetch("/api/documents/" + currentDocId + "/snapshot/" + hash)
-    .then(r => r.json())
-    .then(d => {
-      const segments = d.content
-        ? [{ type: "added", text: d.content }]
-        : [];
-      renderDiff(segments, commit);
-    });
-}
 
 function renderDiff(segments, commit) {
   if (!segments || segments.length === 0) {
@@ -1016,15 +1012,15 @@ function renderDiff(segments, commit) {
   }
 
   diffTitle.textContent = commit.hash + " — " + commit.message;
-  diffBody.innerHTML = "";
-
+  const fragment = document.createDocumentFragment();
   for (const seg of segments) {
     const span = document.createElement("span");
     span.className = "diff-seg diff-" + seg.type;
     span.textContent = seg.text;
-    diffBody.appendChild(span);
+    fragment.appendChild(span);
   }
-
+  diffBody.innerHTML = "";
+  diffBody.appendChild(fragment);
   diffPanel.classList.remove("hidden");
 }
 
