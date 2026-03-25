@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { analyzeText, POETRY_FORMS, FORM_CATEGORIES } from './syllabify.js';
 import { setCmuUpdateCallback } from './rhyme-client.js';
+import RichTextEditor from './RichTextEditor.jsx';
 
 // ── Rhyme group colour palette ───────────────────────────────────────────────
 
@@ -340,7 +341,7 @@ function FormStatus({ lines, rhymeGroups, form }) {
 
 // ── Main editor component ────────────────────────────────────────────────────
 
-export default function SyllableEditor({ value, onChange, initialFormKey, onFormKeyChange }) {
+export default function SyllableEditor({ value, htmlContent, onChange, onHtmlChange, initialFormKey, onFormKeyChange }) {
   const [showLineNums, setShowLineNums] = useState(true);
   const [formKey, setFormKey] = useState(initialFormKey || 'haiku');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
@@ -355,9 +356,12 @@ export default function SyllableEditor({ value, onChange, initialFormKey, onForm
     return () => setCmuUpdateCallback(null);
   }, []);
 
-  const handleChange = useCallback(
-    (e) => onChange(e.target.value),
-    [onChange]
+  const handleEditorUpdate = useCallback(
+    (html, plainText) => {
+      onChange(plainText);
+      onHtmlChange?.(html);
+    },
+    [onChange, onHtmlChange]
   );
 
   // Determine gutter rows: actual lines + ghost rows for fixed-length forms
@@ -437,14 +441,13 @@ export default function SyllableEditor({ value, onChange, initialFormKey, onForm
             })}
           </div>
 
-          {/* ── Textarea ── */}
-          <textarea
-            className="syl-textarea"
-            value={value}
-            onChange={handleChange}
-            spellCheck={false}
-            autoFocus
+          {/* ── Rich text editor ── */}
+          <RichTextEditor
+            className="syl-rich-editor"
+            content={htmlContent}
+            onUpdate={handleEditorUpdate}
             placeholder="begin writing..."
+            autoFocus
           />
         </div>
 

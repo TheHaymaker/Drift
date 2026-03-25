@@ -2097,3 +2097,126 @@ input[type="range"]::-webkit-slider-thumb {
 #syllableEditorMount.visible {
   display: flex;
 }
+
+/* ── Standalone rich editor mount ── */
+#standaloneEditorMount {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+#standaloneEditorMount.visible {
+  display: flex;
+}
+
+/* ── Rich text editor (Tiptap / ProseMirror) ── */
+
+.rich-editor-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Standalone (non-syllable) mode — match the old textarea styling */
+#standaloneEditorMount .ProseMirror {
+  width: 100%;
+  min-height: 500px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.45rem;
+  line-height: 2;
+  letter-spacing: 0.01em;
+  caret-color: var(--accent);
+  padding: 0;
+}
+
+/* Syllable mode — match the old syl-textarea styling */
+.syl-rich-editor .ProseMirror {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.25rem;
+  line-height: 2;
+  letter-spacing: 0.01em;
+  caret-color: var(--accent);
+  padding: 28px 40px 28px 12px;
+}
+
+.syl-rich-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Common ProseMirror resets */
+.ProseMirror p {
+  margin: 0;
+}
+
+.ProseMirror ::selection {
+  background: rgba(160, 140, 106, 0.2);
+}
+
+/* Placeholder (empty editor, first paragraph) */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--text-faint);
+  font-style: italic;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* ── Bubble menu ── */
+
+.bubble-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(26, 24, 20, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.bubble-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-family: 'EB Garamond', Georgia, serif;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+
+.bubble-btn:hover {
+  color: var(--text);
+  background: rgba(160, 140, 106, 0.08);
+}
+
+.bubble-btn.is-active {
+  color: var(--accent);
+  background: rgba(160, 140, 106, 0.15);
+}
+
+.bubble-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  margin: 0 3px;
+}
