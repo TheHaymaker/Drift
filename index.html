@@ -187,8 +187,10 @@
         id="editor"
         placeholder="begin writing. drift commits when you pause."
         spellcheck="false"
-        autofocus
+        style="display:none"
       ></textarea>
+      <!-- Standalone rich editor mount (non-syllable mode) -->
+      <div id="standaloneEditorMount"></div>
       <!-- Syllable editor React mount — shown when syllable mode is active -->
       <div id="syllableEditorMount"></div>
       <div class="diff-panel hidden" id="diffPanel">

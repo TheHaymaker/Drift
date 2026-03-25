@@ -3,6 +3,8 @@ import { createElement, useState, useCallback, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import Playback from "./Playback.jsx";
 import SyllableEditor from "./SyllableEditor.jsx";
+import RichTextEditor from "./RichTextEditor.jsx";
+import { contentToHtml, stripHtml } from "./htmlUtils.js";
 import { createGitClient } from "./git-client.js";
 import { createSyncClient } from "./sync.js";
 
@@ -169,6 +171,12 @@ let syllableEditorRoot = null;
 let sylModeActive = false;
 let currentFormKey = 'haiku';
 
+// ─── Rich text state ───
+// The hidden textarea (#editor) holds plain text for backward-compat event flow.
+// currentHtml holds the authoritative rich content (HTML) for git/WS storage.
+let currentHtml = '';
+let standaloneEditorRoot = null;
+
 function mountSyllableEditor() {
   if (!syllableEditorRoot) {
     syllableEditorRoot = createRoot(syllableEditorMount);
@@ -177,11 +185,15 @@ function mountSyllableEditor() {
   // and routes changes back through the native textarea event system.
   function SyllableEditorWrapper() {
     const [text, setText] = useState(editor.value);
+    const [html, setHtml] = useState(currentHtml || contentToHtml(editor.value));
 
     // Keep in sync when the textarea is updated externally (e.g. commit history
     // click, WS init) by listening to a custom event dispatched by setEditorContent().
     useEffect(() => {
-      const sync = () => setText(editor.value);
+      const sync = () => {
+        setText(editor.value);
+        setHtml(currentHtml || contentToHtml(editor.value));
+      };
       editor.addEventListener("_syl-sync", sync);
       return () => editor.removeEventListener("_syl-sync", sync);
     }, []);
@@ -190,6 +202,10 @@ function mountSyllableEditor() {
       setText(newText);
       editor.value = newText;
       editor.dispatchEvent(new Event("input", { bubbles: true }));
+    }, []);
+
+    const handleHtmlChange = useCallback((newHtml) => {
+      currentHtml = newHtml;
     }, []);
 
     const handleFormKeyChange = useCallback((key) => {
@@ -201,7 +217,9 @@ function mountSyllableEditor() {
 
     return createElement(SyllableEditor, {
       value: text,
+      htmlContent: html,
       onChange: handleChange,
+      onHtmlChange: handleHtmlChange,
       initialFormKey: currentFormKey,
       onFormKeyChange: handleFormKeyChange,
     });
@@ -216,30 +234,71 @@ function unmountSyllableEditor() {
   }
 }
 
+// ─── Standalone rich editor (non-syllable mode) ───
+
+function mountStandaloneEditor() {
+  if (!standaloneEditorRoot) {
+    standaloneEditorRoot = createRoot(document.getElementById("standaloneEditorMount"));
+  }
+  function StandaloneWrapper() {
+    const [html, setHtml] = useState(currentHtml || contentToHtml(editor.value));
+
+    useEffect(() => {
+      const sync = () => setHtml(currentHtml || contentToHtml(editor.value));
+      editor.addEventListener("_syl-sync", sync);
+      return () => editor.removeEventListener("_syl-sync", sync);
+    }, []);
+
+    const handleUpdate = useCallback((newHtml, plainText) => {
+      currentHtml = newHtml;
+      editor.value = plainText;
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    }, []);
+
+    return createElement(RichTextEditor, {
+      content: html,
+      onUpdate: handleUpdate,
+      placeholder: "begin writing. drift commits when you pause.",
+      autoFocus: true,
+    });
+  }
+  standaloneEditorRoot.render(createElement(StandaloneWrapper));
+}
+
+function unmountStandaloneEditor() {
+  if (standaloneEditorRoot) {
+    standaloneEditorRoot.render(null);
+  }
+}
+
 function setSylMode(active) {
   sylModeActive = active;
+  // The native textarea is always hidden — we toggle between
+  // the standalone rich editor and the syllable-mode rich editor.
+  editor.style.display = "none";
   if (active) {
-    editor.style.display = "none";
+    unmountStandaloneEditor();
+    document.getElementById("standaloneEditorMount").classList.remove("visible");
     syllableEditorMount.classList.add("visible");
     sylModeBtn.classList.add("active");
     mountSyllableEditor();
   } else {
-    editor.style.display = "";
-    syllableEditorMount.classList.remove("visible");
-    sylModeBtn.classList.remove("active");
     unmountSyllableEditor();
-    editor.focus();
+    syllableEditorMount.classList.remove("visible");
+    document.getElementById("standaloneEditorMount").classList.add("visible");
+    sylModeBtn.classList.remove("active");
+    mountStandaloneEditor();
   }
 }
 
 sylModeBtn.addEventListener("click", () => setSylMode(!sylModeActive));
 
-// Helper: update textarea value and notify syllable editor if active.
+// Helper: update content and notify the active rich editor.
 function setEditorContent(content) {
-  editor.value = content;
-  if (sylModeActive) {
-    editor.dispatchEvent(new CustomEvent("_syl-sync"));
-  }
+  currentHtml = contentToHtml(content);
+  editor.value = stripHtml(content);
+  // Notify whichever React editor is mounted
+  editor.dispatchEvent(new CustomEvent("_syl-sync"));
 }
 
 // ─── Router ───
@@ -719,11 +778,15 @@ function showEditor(docId, readOnly) {
   editorView.classList.remove("hidden");
   connStatus.classList.remove("hidden");
   editor.readOnly = !!readOnly;
-  editor.placeholder = readOnly
-    ? "reading..."
-    : "begin writing. drift commits when you pause.";
+  editor.style.display = "none"; // always hidden — rich editor replaces it
   document.title = "drift \u2014 writing";
   connectWs(docId);
+
+  // Mount the appropriate rich editor
+  if (!sylModeActive) {
+    mountStandaloneEditor();
+    document.getElementById("standaloneEditorMount").classList.add("visible");
+  }
 }
 
 function disconnectWs() {
@@ -761,7 +824,7 @@ function connectWs(docId) {
       renderCommits(msg.log);
       status.textContent = "ready";
       status.className = "status-pill";
-      if (!editor.readOnly) editor.focus();
+      // Focus is handled by the Tiptap rich editor's autoFocus prop
 
       // Initialize browser-side git
       if (canUseLocalGit) {
@@ -1045,12 +1108,15 @@ editor.addEventListener("input", () => {
   status.textContent = "writing";
   status.className = "status-pill typing";
 
+  // Use the rich HTML content for storage; fall back to plain text
+  const contentForStorage = currentHtml || editor.value;
+
   if (gitClient && currentDocId && currentFilename) {
     // Write to local git (pause timer in worker handles commits)
     gitClient.writeFile({
       docId: currentDocId,
       filename: currentFilename,
-      content: editor.value,
+      content: contentForStorage,
     });
     // Send lightweight typing indicator over WebSocket
     if (ws && ws.readyState === 1) {
@@ -1059,20 +1125,12 @@ editor.addEventListener("input", () => {
   } else {
     // Fallback: send full content over WebSocket (original path)
     if (ws && ws.readyState === 1) {
-      ws.send(JSON.stringify({ type: "update", content: editor.value }));
+      ws.send(JSON.stringify({ type: "update", content: contentForStorage }));
     }
   }
 });
 
-editor.addEventListener("keydown", (e) => {
-  if (e.key === "Tab") {
-    e.preventDefault();
-    const start = editor.selectionStart;
-    editor.value = editor.value.slice(0, start) + "  " + editor.value.slice(editor.selectionEnd);
-    editor.selectionStart = editor.selectionEnd = start + 2;
-    editor.dispatchEvent(new Event("input"));
-  }
-});
+// Tab key handling is managed by Tiptap's ProseMirror editor.
 
 thresholdSlider.addEventListener("input", () => {
   const val = parseInt(thresholdSlider.value);

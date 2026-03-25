@@ -34,9 +34,29 @@ function getOrCreateFS(docId) {
 
 const author = { name: "drift", email: "drift@poem" };
 
+// ─── HTML stripping for commit message analysis ───
+
+function stripHtml(html) {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n$/, '');
+}
+
 // ─── Commit message generation (ported from Session.js:116-169) ───
 
-function generateMessage(oldText, newText) {
+function generateMessage(oldRaw, newRaw) {
+  const oldText = stripHtml(oldRaw);
+  const newText = stripHtml(newRaw);
   const oldLines = oldText.split("\n");
   const newLines = newText.split("\n");
 
@@ -121,9 +141,9 @@ function lcs(a, b) {
   return res;
 }
 
-function structuredDiff(oldText, newText) {
-  const oldLines = oldText.split("\n");
-  const newLines = newText.split("\n");
+function structuredDiff(oldRaw, newRaw) {
+  const oldLines = stripHtml(oldRaw).split("\n");
+  const newLines = stripHtml(newRaw).split("\n");
   const common = lcs(oldLines, newLines);
 
   const segments = [];

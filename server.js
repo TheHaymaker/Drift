@@ -298,8 +298,17 @@ app.get("/api/documents/:docId/playback", requireAuth, async (req, res) => {
     if (log.length === 0) return res.json({ commits: [] });
     const commits = [];
     for (const c of log) {
-      const content = await GitOps.getFileAt(doc.repoPath, c.hash, doc.filename);
-      const lines = content.split("\n");
+      const raw = await GitOps.getFileAt(doc.repoPath, c.hash, doc.filename);
+      // Strip HTML tags for playback (content may be rich text HTML)
+      const plain = raw
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&nbsp;/g, ' ')
+        .replace(/\n$/, '');
+      const lines = plain.split("\n");
       if (lines[lines.length - 1] === "") lines.pop();
       commits.push({
         hash: c.hash.slice(0, 7),
