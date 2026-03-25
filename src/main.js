@@ -205,11 +205,6 @@ const connDot = document.getElementById("connDot");
 const connLabel = document.getElementById("connLabel");
 const toast = document.getElementById("toast");
 const diffPanel = document.getElementById("diffPanel");
-const undoBtn = document.getElementById("undoBtn");
-const redoBtn = document.getElementById("redoBtn");
-const navBanner = document.getElementById("navBanner");
-const navBannerText = document.getElementById("navBannerText");
-const navBannerClose = document.getElementById("navBannerClose");
 const selectionActionBar = document.getElementById("selectionActionBar");
 const selectionCountText = document.getElementById("selectionCountText");
 const squashSelectedBtn = document.getElementById("squashSelectedBtn");
@@ -239,9 +234,6 @@ let lastKeystroke = 0;
 let animFrame;
 let isTyping = false;
 let commitLog = [];
-
-// ─── History navigation state ───
-let historyPosition = -1; // -1 = at HEAD (normal editing), 0..N = viewing that commit index
 
 function setEditorEditable(editable) {
   editor.readOnly = !editable;
@@ -1139,7 +1131,6 @@ function createCommitItem(c, isNew, log) {
   const div = document.createElement("div");
   let cls = "commit-item";
   if (isNew) cls += " new";
-  if (historyPosition >= 0 && c.index === historyPosition) cls += " viewing";
   if (selectedCommits.has(c.index)) cls += " selected";
   div.className = cls;
   div.dataset.hash = c.hash;
@@ -1151,7 +1142,6 @@ function createCommitItem(c, isNew, log) {
     '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
     '<div class="commit-time">#' + (c.index + 1) + '</div>' +
     '<div class="commit-actions">' +
-      (c.index < logLen - 1 ? '<button class="commit-revert-btn">revert</button>' : '') +
       (logLen > 1 ? '<button class="commit-delete-btn">delete</button>' : '') +
     '</div>';
   return div;
@@ -1181,17 +1171,6 @@ async function fetchDiff(hashA, hashB) {
 
 // Event delegation — single click listener on commit list
 commitList.addEventListener("click", async (e) => {
-  // Handle revert button clicks
-  if (e.target.classList.contains("commit-revert-btn")) {
-    e.stopPropagation();
-    const item = e.target.closest(".commit-item");
-    if (!item) return;
-    const index = parseInt(item.dataset.index, 10);
-    const c = commitLog[index];
-    if (c) await revertToCommit(c);
-    return;
-  }
-
   // Handle inline delete button clicks
   if (e.target.classList.contains("commit-delete-btn")) {
     e.stopPropagation();
@@ -1231,15 +1210,12 @@ commitList.addEventListener("click", async (e) => {
     return;
   }
 
-  // Plain click: clear selection and navigate
+  // Plain click: clear selection and show diff
   if (selectedCommits.size > 0) {
     clearSelection();
   }
 
-  // Navigate to this commit
-  historyPosition = index;
-  updateNavUI();
-  await loadSnapshot(commitLog[index]);
+  await showCommitDiff(commitLog[index]);
 });
 
 // Drag-and-drop delegation on commit list
@@ -1305,11 +1281,8 @@ function renderCommits(log, newHash) {
   commitCountNum.textContent = log.length;
   if (miniCommitCount) miniCommitCount.textContent = log.length + " snapshots";
 
-  // Update undo/redo button states
-  updateNavButtons();
-
-  // Incremental update: prepend only the new commit (skip when selecting/nav mode)
-  if (newHash && commitList.children.length > 0 && selectedCommits.size === 0 && historyPosition === -1) {
+  // Incremental update: prepend only the new commit (skip when selecting)
+  if (newHash && commitList.children.length > 0 && selectedCommits.size === 0) {
     const c = log.find(entry => entry.hash === newHash);
     if (c) {
       commitList.prepend(createCommitItem(c, true, log));
@@ -1326,106 +1299,6 @@ function renderCommits(log, newHash) {
   commitList.innerHTML = "";
   commitList.appendChild(fragment);
 }
-
-// ─── History Navigation ───
-
-function updateNavButtons() {
-  if (!commitLog.length) {
-    undoBtn.disabled = true;
-    redoBtn.disabled = true;
-    return;
-  }
-  if (historyPosition === -1) {
-    // At HEAD — can undo if there's more than one commit
-    undoBtn.disabled = commitLog.length <= 1;
-    redoBtn.disabled = true;
-  } else {
-    undoBtn.disabled = historyPosition <= 0;
-    redoBtn.disabled = historyPosition >= commitLog.length - 1;
-  }
-}
-
-function updateNavUI() {
-  updateNavButtons();
-  // Highlight the current commit in the list
-  document.querySelectorAll(".commit-item").forEach(el => {
-    el.classList.remove("viewing", "active");
-  });
-  if (historyPosition >= 0) {
-    const items = document.querySelectorAll(".commit-item");
-    // Items are in reverse order, so index 0 in DOM = last commit
-    const domIndex = commitLog.length - 1 - historyPosition;
-    if (items[domIndex]) items[domIndex].classList.add("viewing");
-    navBannerText.textContent = "viewing snapshot #" + (historyPosition + 1) + " of " + commitLog.length;
-    navBanner.classList.remove("hidden");
-    setEditorEditable(false);
-  } else {
-    navBanner.classList.add("hidden");
-    setEditorEditable(true);
-  }
-}
-
-function exitNavMode() {
-  historyPosition = -1;
-  updateNavUI();
-  diffPanel.classList.add("hidden");
-}
-
-async function restoreHeadContent() {
-  if (!commitLog.length) return;
-  const head = commitLog[commitLog.length - 1];
-  const content = await fetchSnapshot(head.hash);
-  setEditorContent(content);
-}
-
-async function loadSnapshot(c) {
-  if (c.index > 0) {
-    const prev = commitLog[c.index - 1];
-    const [snapContent, diffSegments] = await Promise.all([
-      fetchSnapshot(c.hash),
-      fetchDiff(prev.hash, c.hash),
-    ]);
-    setEditorContent(snapContent);
-    showToast("viewing #" + (c.index + 1) + " " + c.hash);
-    renderDiff(diffSegments, c);
-  } else {
-    const snapContent = await fetchSnapshot(c.hash);
-    setEditorContent(snapContent);
-    showToast("viewing #" + (c.index + 1) + " " + c.hash);
-    renderDiff(snapContent ? [{ type: "added", text: snapContent }] : [], c);
-  }
-}
-
-async function undoCommit() {
-  if (commitLog.length <= 1) return;
-  if (historyPosition === -1) {
-    historyPosition = commitLog.length - 2; // go to second-to-last
-  } else if (historyPosition > 0) {
-    historyPosition--;
-  } else {
-    return;
-  }
-  updateNavUI();
-  await loadSnapshot(commitLog[historyPosition]);
-}
-
-async function redoCommit() {
-  if (historyPosition === -1) return;
-  if (historyPosition < commitLog.length - 1) {
-    historyPosition++;
-    if (historyPosition === commitLog.length - 1) {
-      // Back at HEAD
-      exitNavMode();
-      await restoreHeadContent();
-    } else {
-      updateNavUI();
-      await loadSnapshot(commitLog[historyPosition]);
-    }
-  }
-}
-
-undoBtn.addEventListener("click", undoCommit);
-redoBtn.addEventListener("click", redoCommit);
 
 // ── Sidebar collapse/expand ──
 const sidebarToggle = document.getElementById("sidebarToggle");
@@ -1446,34 +1319,10 @@ sidebarToggle.addEventListener("click", () => {
   localStorage.setItem("sidebarCollapsed", collapsed);
 });
 
-navBannerClose.addEventListener("click", async () => {
-  exitNavMode();
-  await restoreHeadContent();
-});
-
-// Keyboard shortcuts for undo/redo navigation
+// Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
-  // Only intercept when in nav mode or when editor is focused
   const isEditorFocused = document.activeElement === editor || editor.contains(document.activeElement);
   if (!currentDocId) return;
-
-  // Ctrl/Cmd + Shift + Z = redo
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Z") {
-    if (historyPosition !== -1) {
-      e.preventDefault();
-      redoCommit();
-    }
-    return;
-  }
-
-  // Ctrl/Cmd + Z = undo (only when in nav mode or not actively editing to not interfere with text undo)
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
-    if (historyPosition !== -1 || !isEditorFocused) {
-      e.preventDefault();
-      undoCommit();
-    }
-    return;
-  }
 
   // Escape = clear commit selection
   if (e.key === "Escape" && selectedCommits.size > 0) {
@@ -1489,37 +1338,6 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 });
-
-// ─── Revert to Commit ───
-
-async function revertToCommit(commit) {
-  if (!gitClient || !currentDocId || !currentFilename) {
-    showToast("revert unavailable");
-    return;
-  }
-  try {
-    const result = await gitClient.revertTo({
-      docId: currentDocId,
-      filename: currentFilename,
-      hash: commit.hash,
-      commitIndex: commit.index,
-    });
-    if (result && result.noChange) {
-      showToast("already at that content");
-      exitNavMode();
-      return;
-    }
-    if (result && result.log) {
-      exitNavMode();
-      setEditorContent(result.content);
-      renderCommits(result.log, result.hash);
-      showToast("reverted to #" + (commit.index + 1));
-      if (syncClient) syncClient.pushCommit({ hash: result.hash, message: result.message });
-    }
-  } catch (err) {
-    showToast("revert failed: " + err.message);
-  }
-}
 
 // ─── Commit Selection & Actions ───
 
@@ -1580,7 +1398,6 @@ squashModalConfirm.addEventListener("click", async () => {
       message,
     });
     if (result && result.log) {
-      exitNavMode();
       renderCommits(result.log);
       setEditorContent(result.content);
       showToast("squashed " + (toIndex - fromIndex + 1) + " snapshots into 1");
@@ -1621,7 +1438,6 @@ deleteModalConfirm.addEventListener("click", async () => {
       indices,
     });
     if (result && result.log) {
-      exitNavMode();
       renderCommits(result.log);
       setEditorContent(result.content);
       showToast("deleted " + indices.length + " snapshot" + (indices.length > 1 ? "s" : ""));
@@ -1669,7 +1485,6 @@ async function reorderCommit(fromIndex, toIndex) {
       newOrder: order,
     });
     if (result && result.log) {
-      exitNavMode();
       renderCommits(result.log);
       setEditorContent(result.content);
       showToast("commits reordered");
@@ -1701,9 +1516,19 @@ function renderDiff(segments, commit) {
   diffPanel.classList.remove("hidden");
 }
 
-async function closeDiff() {
-  exitNavMode();
-  await restoreHeadContent();
+async function showCommitDiff(c) {
+  if (c.index > 0) {
+    const prev = commitLog[c.index - 1];
+    const diffSegments = await fetchDiff(prev.hash, c.hash);
+    renderDiff(diffSegments, c);
+  } else {
+    const snapContent = await fetchSnapshot(c.hash);
+    renderDiff(snapContent ? [{ type: "added", text: snapContent }] : [], c);
+  }
+}
+
+function closeDiff() {
+  diffPanel.classList.add("hidden");
 }
 
 diffClose.addEventListener("click", closeDiff);
@@ -1777,10 +1602,6 @@ function destroyLocalGit() {
 
 editor.addEventListener("input", () => {
   if (editor.readOnly) return;
-  // Exit navigation mode when user starts typing
-  if (historyPosition !== -1) {
-    exitNavMode();
-  }
   lastKeystroke = Date.now();
   isTyping = true;
   status.textContent = "writing";
@@ -1885,7 +1706,6 @@ editor.addEventListener("blur", () => {
 editor.addEventListener("focus", async () => {
   if (!currentDocId) return;
   document.querySelectorAll(".commit-item").forEach(el => el.classList.remove("active"));
-  exitNavMode();
   if (gitClient && currentDocId && currentFilename) {
     try {
       const result = await gitClient.readFile({ docId: currentDocId, filename: currentFilename });
