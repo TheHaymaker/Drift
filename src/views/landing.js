@@ -71,26 +71,28 @@ let disintegrateCleanup = null;
 
 function initDisintegrateShowcase() {
   const container = document.getElementById('disintegrateShowcase');
-  const word = document.getElementById('disintegrateWord');
-  if (!container || !word) return;
+  const words = container ? container.querySelectorAll('.disintegrate-word') : [];
+  if (!container || !words.length) return;
 
   const maskUrl = generateDisintegrationMask();
-  word.style.maskImage = `url(${maskUrl})`;
-  word.style.webkitMaskImage = `url(${maskUrl})`;
-
-  // Start fully transparent (frame 23)
-  word.style.maskPosition = '100% 0';
-  word.style.webkitMaskPosition = '100% 0';
+  words.forEach(w => {
+    w.style.maskImage = `url(${maskUrl})`;
+    w.style.webkitMaskImage = `url(${maskUrl})`;
+    // Start fully transparent (frame 23)
+    w.style.maskPosition = '100% 0';
+    w.style.webkitMaskPosition = '100% 0';
+  });
 
   let ticking = false;
 
   function update() {
     const rect = container.getBoundingClientRect();
     const viewH = window.innerHeight;
-    // progress: 0 when container top reaches bottom of viewport,
-    //           1 when container top reaches 20% from top of viewport
-    // This keeps the word hidden until the section is actually visible
-    const raw = (viewH - rect.top) / (viewH * 0.8);
+    // progress: 0 when container center reaches viewport center,
+    //           1 when container top reaches 15% from top
+    // This delays the reveal until the showcase is solidly in view
+    const centerY = rect.top + rect.height / 2;
+    const raw = (viewH * 0.5 - centerY) / (viewH * 0.35);
     const t = Math.max(0, Math.min(1, raw));
 
     // Snap to nearest frame for the stepped pixel effect
@@ -98,8 +100,10 @@ function initDisintegrateShowcase() {
     // Materialize: frame 0 = fully visible (0%), frame 23 = fully transparent (100%)
     // As t goes 0→1, we want mask-position to go from 100% (hidden) to 0% (visible)
     const pos = ((MASK_FRAMES - 1 - frame) / (MASK_FRAMES - 1)) * 100;
-    word.style.maskPosition = `${pos}% 0`;
-    word.style.webkitMaskPosition = `${pos}% 0`;
+    words.forEach(w => {
+      w.style.maskPosition = `${pos}% 0`;
+      w.style.webkitMaskPosition = `${pos}% 0`;
+    });
 
     ticking = false;
   }
