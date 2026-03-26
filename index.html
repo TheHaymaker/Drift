@@ -457,6 +457,19 @@
         </div>
       </div>
 
+      <!-- Export format picker modal -->
+      <div class="commit-modal-overlay hidden" id="exportModal">
+        <div class="commit-modal">
+          <p>export as&hellip;</p>
+          <div class="commit-modal-actions commit-modal-actions--vertical">
+            <button class="btn btn-sm" id="exportJsonBtn">history (json)</button>
+            <button class="btn btn-sm" id="exportPdfBtn">poem (pdf)</button>
+            <button class="btn btn-sm" id="exportDocxBtn">poem (docx)</button>
+            <button class="btn btn-sm" id="exportCancelBtn">cancel</button>
+          </div>
+        </div>
+      </div>
+
       <div class="settings">
         <div class="setting-row">
           <span class="setting-label">pause threshold</span>
@@ -465,7 +478,7 @@
         <input type="range" id="thresholdSlider" min="500" max="15000" step="250" value="3000">
         <button class="btn" id="forceCommitBtn">commit now</button>
         <button class="btn" id="playbackBtn" style="margin-top: 4px;">&#9654; play back</button>
-        <button class="btn" id="exportBtn" style="margin-top: 4px;">export history</button>
+        <button class="btn" id="exportBtn" style="margin-top: 4px;">export</button>
       </div>
     </div>
   </div>
