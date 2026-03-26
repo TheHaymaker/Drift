@@ -8,6 +8,7 @@ import { createGitClient } from "../git-client.js";
 import { createSyncClient } from "../sync.js";
 import { state } from '../state.js';
 import { showToast } from '../toast.js';
+import { exportHistoryJson, exportPoemPdf, exportPoemDocx } from '../exportPoem.js';
 import { renderCommits } from '../editor/commit-list.js';
 import { checkAuth } from '../auth.js';
 
@@ -514,38 +515,30 @@ document.getElementById("playbackBtn").addEventListener("click", () => {
   if (state.currentDocId) _navigate("#/read/" + state.currentDocId);
 });
 
-exportBtn.addEventListener("click", async () => {
+const exportModal = document.getElementById("exportModal");
+
+exportBtn.addEventListener("click", () => {
   if (!state.currentDocId) return;
-  try {
-    let snapshots;
-    if (state.gitClient && state.currentFilename) {
-      // Export from local git
-      const logResult = await state.gitClient.getLog({ docId: state.currentDocId });
-      snapshots = [];
-      for (const c of logResult.log) {
-        const snap = await state.gitClient.getFileAt({ docId: state.currentDocId, filename: state.currentFilename, hash: c.hash });
-        snapshots.push({ ...c, content: snap.content });
-      }
-    } else {
-      // Export from server
-      const log = await fetch("/api/documents/" + state.currentDocId + "/log").then(r => r.json());
-      snapshots = [];
-      for (const c of log) {
-        const snap = await fetch("/api/documents/" + state.currentDocId + "/snapshot/" + c.hash).then(r => r.json());
-        snapshots.push({ ...c, content: snap.content });
-      }
-    }
-    const blob = new Blob([JSON.stringify(snapshots, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "drift-export-" + Date.now() + ".json";
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("exported " + snapshots.length + " snapshots");
-  } catch (e) {
-    showToast("export failed");
-  }
+  exportModal.classList.remove("hidden");
+});
+
+const hideExportModal = () => exportModal.classList.add("hidden");
+
+document.getElementById("exportJsonBtn").addEventListener("click", () => {
+  hideExportModal();
+  exportHistoryJson(state, showToast);
+});
+document.getElementById("exportPdfBtn").addEventListener("click", () => {
+  hideExportModal();
+  exportPoemPdf(state, showToast);
+});
+document.getElementById("exportDocxBtn").addEventListener("click", () => {
+  hideExportModal();
+  exportPoemDocx(state, showToast);
+});
+document.getElementById("exportCancelBtn").addEventListener("click", hideExportModal);
+exportModal.addEventListener("click", (e) => {
+  if (e.target === exportModal) hideExportModal();
 });
 
 editor.addEventListener("blur", () => {

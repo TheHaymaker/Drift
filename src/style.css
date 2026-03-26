@@ -867,6 +867,14 @@ textarea::selection {
   color: var(--text);
 }
 
+.commit-modal-actions--vertical {
+  flex-direction: column;
+}
+.commit-modal-actions--vertical .btn-sm {
+  width: 100%;
+  text-align: center;
+}
+
 .btn-danger {
   border-color: #ef4444 !important;
   color: #ef4444 !important;
