@@ -67,7 +67,16 @@ const staticDir = fs.existsSync(distDir) ? distDir : path.join(__dirname, "publi
 app.use(express.static(staticDir));
 
 // ─── Health check (used by fly.io to detect readiness) ───
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+app.get("/api/health", (req, res) => {
+  const docs = DocumentStore.listDocuments();
+  let reposOnDisk = 0;
+  try {
+    reposOnDisk = fs.readdirSync(DocumentStore.REPOS_DIR).filter((f) =>
+      fs.statSync(path.join(DocumentStore.REPOS_DIR, f)).isDirectory()
+    ).length;
+  } catch (e) { /* repos dir may not exist yet */ }
+  res.json({ status: "ok", documents: docs.length, reposOnDisk, dataDir: DocumentStore.DATA_DIR });
+});
 
 // ─── Auth routes ───
 app.use(createAuthRouter());
@@ -103,9 +112,47 @@ app.get("*", (req, res) => {
 
 handleWebSocketUpgrade(server, sessions, sessionMiddleware);
 
+// ─── Graceful shutdown (flush SQLite WAL before Fly.io stops the machine) ───
+
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received — flushing WAL and shutting down");
+  const { db } = require("./lib/db");
+  db.pragma("wal_checkpoint(TRUNCATE)");
+  db.close();
+  process.exit(0);
+});
+
+// ─── Volume integrity check ───
+
+function checkVolumeIntegrity() {
+  const dataDir = DocumentStore.DATA_DIR;
+  const reposDir = DocumentStore.REPOS_DIR;
+
+  let repoDirCount = 0;
+  try {
+    repoDirCount = fs.readdirSync(reposDir).filter((f) =>
+      fs.statSync(path.join(reposDir, f)).isDirectory()
+    ).length;
+  } catch (e) { /* repos dir may not exist yet */ }
+
+  const docs = DocumentStore.listDocuments();
+  const { db } = require("./lib/db");
+  const userCount = db.prepare("SELECT count(*) as count FROM users").get().count;
+
+  console.log(`  volume check: ${docs.length} docs, ${repoDirCount} repos on disk, ${userCount} users`);
+
+  if (docs.length === 0 && repoDirCount === 0 && userCount === 0) {
+    console.warn("  ⚠ WARNING: Volume appears empty — possible volume reset or new volume attached");
+    console.warn(`  ⚠ Data directory: ${dataDir}`);
+  } else if (docs.length !== repoDirCount) {
+    console.warn(`  ⚠ WARNING: DB/disk mismatch — ${docs.length} docs in DB vs ${repoDirCount} repos on disk`);
+  }
+}
+
 // ─── Startup ───
 
 (async () => {
+  checkVolumeIntegrity();
   await migrateLegacyRepo();
 
   // Claim orphaned documents (owner_id IS NULL) for a specific user

@@ -16,6 +16,9 @@ primary_region = 'iad'
   source = "drift_data"
   destination = "/data"
 
+[deploy]
+  strategy = "immediate"
+
 [http_service]
   internal_port = 3377
   force_https = true
