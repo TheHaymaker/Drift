@@ -556,7 +556,7 @@ textarea::selection {
   transition: padding 0.25s ease;
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100dvh;
   align-self: start;
   z-index: 1;
 }
