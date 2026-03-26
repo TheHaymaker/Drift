@@ -346,8 +346,22 @@ export async function initLocalGit(docId, filename, serverContent, serverLog) {
         }
       }
     } else if (initResult.existing) {
-      // Existing local repo — write current content to match server
-      await state.gitClient.writeFile({ docId, filename, content: serverContent });
+      // Check if local history matches server — re-clone if diverged
+      const localLog = await state.gitClient.getLog({ docId });
+      const localHashes = (localLog.log || []).map(c => c.hash).join(',');
+      const serverHashes = (serverLog || []).map(c => c.hash).join(',');
+      if (localHashes !== serverHashes) {
+        console.log("[drift] local history diverged from server — re-cloning");
+        const res = await fetch(`/api/documents/${docId}/sync/clone`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.commits && data.commits.length > 0) {
+            await state.gitClient.clone({ docId, filename, commits: data.commits });
+          }
+        }
+      } else {
+        await state.gitClient.writeFile({ docId, filename, content: serverContent });
+      }
     }
 
     // Set threshold to match
@@ -392,7 +406,7 @@ export function destroyLocalGit() {
 }
 
 export async function reorderCommit(fromIndex, toIndex) {
-  if (!state.gitClient || !state.currentDocId || !state.currentFilename) {
+  if (!state.currentDocId || !state.currentFilename) {
     showToast("reorder unavailable");
     return;
   }
@@ -404,17 +418,31 @@ export async function reorderCommit(fromIndex, toIndex) {
 
   try {
     showToast("reordering\u2026");
-    const result = await state.gitClient.reorder({
-      docId: state.currentDocId,
-      filename: state.currentFilename,
-      newOrder: order,
-    });
-    if (result && result.log) {
-      renderCommits(result.log);
-      setEditorContent(result.content);
-      showToast("commits reordered");
+    let log, content;
+    if (state.gitClient) {
+      const result = await state.gitClient.reorder({
+        docId: state.currentDocId,
+        filename: state.currentFilename,
+        newOrder: order,
+      });
+      if (!result || !result.log) return;
+      log = result.log;
+      content = result.content;
       if (state.syncClient) state.syncClient.fullSync();
+    } else {
+      const res = await fetch(`/api/documents/${state.currentDocId}/history/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newOrder: order }),
+      });
+      if (!res.ok) throw new Error(`server returned ${res.status}`);
+      const data = await res.json();
+      log = data.log;
+      content = data.content;
     }
+    renderCommits(log);
+    setEditorContent(content);
+    showToast("commits reordered");
   } catch (err) {
     showToast("reorder failed: " + err.message);
   }
