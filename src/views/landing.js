@@ -87,8 +87,10 @@ function initDisintegrateShowcase() {
   function update() {
     const rect = container.getBoundingClientRect();
     const viewH = window.innerHeight;
-    // progress: 0 when container enters bottom of viewport, 1 when top reaches 30% from top
-    const raw = 1 - (rect.top - viewH * 0.3) / (viewH * 0.7);
+    // progress: 0 when container top reaches bottom of viewport,
+    //           1 when container top reaches 20% from top of viewport
+    // This keeps the word hidden until the section is actually visible
+    const raw = (viewH - rect.top) / (viewH * 0.8);
     const t = Math.max(0, Math.min(1, raw));
 
     // Snap to nearest frame for the stepped pixel effect

@@ -1317,14 +1317,14 @@ input[type="range"]::-webkit-slider-thumb {
 .disintegrate-poem {
   display: flex;
   flex-direction: column;
-  transform: rotate(-4deg);
+  transform: rotate(-12deg);
   padding: 20px;
 }
 
 .disintegrate-line {
   font-family: var(--font-body);
-  font-size: 2.2rem;
-  line-height: 1.3;
+  font-size: 6rem;
+  line-height: 1.15;
   color: var(--text-faint);
   white-space: nowrap;
 }
@@ -2439,7 +2439,7 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .disintegrate-line {
-    font-size: 1.6rem;
+    font-size: 4rem;
   }
 }
 
