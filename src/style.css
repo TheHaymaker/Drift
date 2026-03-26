@@ -1322,7 +1322,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .disintegrate-line {
   font-family: var(--font-body);
-  font-size: 12rem;
+  font-size: 4rem;
   line-height: 1.15;
   color: var(--text-faint);
   white-space: nowrap;
@@ -2435,10 +2435,6 @@ input[type="range"]::-webkit-slider-thumb {
 
   .showcase-gutter-row {
     min-height: 2.7rem;
-  }
-
-  .disintegrate-line {
-    font-size: 7rem;
   }
 }
 
