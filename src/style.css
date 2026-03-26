@@ -1311,19 +1311,18 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--bg-raised);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .disintegrate-poem {
   display: flex;
   flex-direction: column;
-  transform: rotate(-12deg);
   padding: 20px;
 }
 
 .disintegrate-line {
   font-family: var(--font-body);
-  font-size: 30rem;
+  font-size: 12rem;
   line-height: 1.15;
   color: var(--text-faint);
   white-space: nowrap;
@@ -2439,7 +2438,7 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .disintegrate-line {
-    font-size: 18rem;
+    font-size: 7rem;
   }
 }
 
