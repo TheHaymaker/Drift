@@ -6,6 +6,7 @@ import { showAuth } from '../auth.js';
 export function destroyLanding() {
   destroyDemo();
   destroySnapshotCycle();
+  destroyRadialBurst();
 }
 export { destroyLanding as destroyDemo };
 
@@ -63,6 +64,63 @@ function destroySnapshotCycle() {
   }
 }
 
+/* ─── Radial burst scroll animation ─── */
+
+let radialBurstCleanup = null;
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function initRadialBurst() {
+  const art = document.getElementById('radialArt');
+  const burst = document.getElementById('radialBurst');
+  if (!art || !burst) return;
+
+  let ticking = false;
+
+  function update() {
+    const rect = art.getBoundingClientRect();
+    const viewH = window.innerHeight;
+    // progress: 0 when element enters bottom of viewport, 1 when top reaches 30% from top
+    const raw = 1 - (rect.top - viewH * 0.3) / (viewH * 0.7);
+    const t = Math.max(0, Math.min(1, raw));
+
+    // Ease out cubic for smoother feel
+    const eased = 1 - Math.pow(1 - t, 3);
+
+    burst.style.setProperty('--burst-scale', lerp(0.4, 1, eased));
+    burst.style.setProperty('--burst-rotation', lerp(90, 0, eased) + 'deg');
+    burst.style.setProperty('--burst-opacity', lerp(0.15, 0.6, eased));
+    burst.style.setProperty('--burst-mask-inner', lerp(45, 15, eased) + '%');
+    burst.style.setProperty('--burst-mask-mid', lerp(60, 35, eased) + '%');
+    burst.style.setProperty('--burst-blur', lerp(4, 0, eased) + 'px');
+
+    ticking = false;
+  }
+
+  function onScroll() {
+    if (!ticking) {
+      requestAnimationFrame(update);
+      ticking = true;
+    }
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  update(); // set initial state
+
+  radialBurstCleanup = () => {
+    window.removeEventListener('scroll', onScroll);
+  };
+}
+
+function destroyRadialBurst() {
+  if (radialBurstCleanup) {
+    radialBurstCleanup();
+    radialBurstCleanup = null;
+  }
+}
+
 export async function showLanding() {
   const { disconnectWs } = await import('./editor.js');
   disconnectWs();
@@ -76,6 +134,7 @@ export async function showLanding() {
   updateLandingNav();
   initDemo();
   initSnapshotCycle();
+  initRadialBurst();
 }
 
 export function updateLandingNav() {
