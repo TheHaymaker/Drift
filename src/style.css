@@ -1283,7 +1283,7 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--text-dim);
 }
 
-/* Process visual — radial art */
+/* Process visual — disintegration showcase */
 
 .landing-process-visual {
   display: flex;
@@ -1292,7 +1292,7 @@ input[type="range"]::-webkit-slider-thumb {
   padding-top: 60px;
 }
 
-.landing-radial-art {
+.landing-disintegrate-showcase {
   width: 100%;
   aspect-ratio: 1;
   max-width: 400px;
@@ -1301,38 +1301,35 @@ input[type="range"]::-webkit-slider-thumb {
   overflow: hidden;
   position: relative;
   background: var(--bg-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.landing-radial-burst {
-  --burst-scale: 0.4;
-  --burst-rotation: 90deg;
-  --burst-opacity: 0.15;
-  --burst-mask-inner: 45%;
-  --burst-mask-mid: 60%;
-  --burst-blur: 4px;
-  position: absolute;
-  inset: 0;
-  background: conic-gradient(
-    from 0deg,
-    var(--text-faint) 0deg, transparent 1.5deg,
-    transparent 3deg, var(--text-faint) 3deg, transparent 4.5deg,
-    transparent 6deg, var(--text-faint) 6deg, transparent 7.5deg,
-    transparent 9deg, var(--text-faint) 9deg, transparent 10.5deg,
-    transparent 12deg, var(--text-faint) 12deg, transparent 13.5deg,
-    transparent 15deg, var(--text-faint) 15deg, transparent 16.5deg,
-    transparent 18deg, var(--text-faint) 18deg, transparent 19.5deg,
-    transparent 21deg, var(--text-faint) 21deg, transparent 22.5deg,
-    transparent 24deg, var(--text-faint) 24deg, transparent 25.5deg,
-    transparent 27deg, var(--text-faint) 27deg, transparent 28.5deg,
-    transparent 30deg
-  );
-  background-size: 100% 100%;
-  mask-image: radial-gradient(circle at center, transparent var(--burst-mask-inner), black var(--burst-mask-mid), black 80%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle at center, transparent var(--burst-mask-inner), black var(--burst-mask-mid), black 80%, transparent 100%);
-  opacity: var(--burst-opacity);
-  transform: scale(var(--burst-scale)) rotate(var(--burst-rotation));
-  filter: blur(var(--burst-blur));
-  will-change: transform, opacity, filter;
+.disintegrate-poem {
+  display: flex;
+  flex-direction: column;
+  transform: rotate(-4deg);
+  padding: 20px;
+}
+
+.disintegrate-line {
+  font-family: var(--font-body);
+  font-size: 2.2rem;
+  line-height: 1.3;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.disintegrate-word {
+  color: var(--accent);
+  font-style: italic;
+  display: inline-block;
+  mask-size: 2400% 100%;
+  -webkit-mask-size: 2400% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  will-change: mask-position, -webkit-mask-position;
 }
 
 .landing-pull-quote {
@@ -2431,6 +2428,10 @@ input[type="range"]::-webkit-slider-thumb {
 
   .showcase-gutter-row {
     min-height: 2.7rem;
+  }
+
+  .disintegrate-line {
+    font-size: 1.6rem;
   }
 }
 
