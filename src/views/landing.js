@@ -3,7 +3,65 @@ import { state } from '../state.js';
 import { initDemo, destroyDemo } from './demo.js';
 import { showAuth } from '../auth.js';
 
-export { destroyDemo };
+export function destroyLanding() {
+  destroyDemo();
+  destroySnapshotCycle();
+}
+export { destroyLanding as destroyDemo };
+
+/* ─── Snapshot cycling showcase ─── */
+
+const snapshotDiffs = [
+  {
+    title: 'a3f1c2d &mdash; first draft',
+    html: '<span class="diff-added">old pond</span><br><span class="diff-added">a frog leaps in</span><br><span class="diff-added">water\u2019s sound</span>',
+  },
+  {
+    title: 'b7e4a19 &mdash; revised image',
+    html: '<span class="diff-kept">old </span><span class="diff-added">silent </span><span class="diff-kept">pond</span><br><span class="diff-removed">a frog</span><span class="diff-added">the frog</span><span class="diff-kept"> leaps in</span><br><span class="diff-removed">water\u2019s sound</span><span class="diff-added">splash &mdash; stillness</span>',
+  },
+  {
+    title: 'c9d0f53 &mdash; final ending',
+    html: '<span class="diff-kept">old silent pond</span><br><span class="diff-kept">the frog leaps in</span><br><span class="diff-removed">splash &mdash; stillness</span><span class="diff-added">sound of water</span>',
+  },
+];
+
+let snapshotCycleInterval = null;
+let snapshotActiveIndex = 0;
+
+function initSnapshotCycle() {
+  const items = document.querySelectorAll('.showcase-snapshot-item');
+  const diffTitle = document.getElementById('showcaseDiffTitle');
+  const diffBody = document.getElementById('showcaseDiffBody');
+  if (!items.length || !diffTitle || !diffBody) return;
+
+  snapshotActiveIndex = 0;
+  applySnapshotState(items, diffTitle, diffBody);
+
+  snapshotCycleInterval = setInterval(() => {
+    snapshotActiveIndex = (snapshotActiveIndex + 1) % 3;
+    applySnapshotState(items, diffTitle, diffBody);
+  }, 2500);
+}
+
+function applySnapshotState(items, diffTitle, diffBody) {
+  items.forEach(el => el.classList.remove('active'));
+  items[snapshotActiveIndex].classList.add('active');
+  const d = snapshotDiffs[snapshotActiveIndex];
+  diffTitle.innerHTML = d.title;
+  diffBody.style.opacity = '0';
+  setTimeout(() => {
+    diffBody.innerHTML = d.html;
+    diffBody.style.opacity = '1';
+  }, 150);
+}
+
+function destroySnapshotCycle() {
+  if (snapshotCycleInterval) {
+    clearInterval(snapshotCycleInterval);
+    snapshotCycleInterval = null;
+  }
+}
 
 export async function showLanding() {
   const { disconnectWs } = await import('./editor.js');
@@ -17,6 +75,7 @@ export async function showLanding() {
   document.title = "drift \u2014 where every pause is a verse";
   updateLandingNav();
   initDemo();
+  initSnapshotCycle();
 }
 
 export function updateLandingNav() {

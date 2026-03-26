@@ -136,6 +136,199 @@
     </div>
   </section>
 
+  <!-- ─── Showcase: Snapshot Cycling + Diff ─── -->
+  <section class="landing-showcase landing-showcase-snapshots">
+    <span class="landing-label">SNAPSHOTS &amp; DIFFS</span>
+    <h2 class="landing-showcase-heading">Watch your poem evolve,<br>one pause at a time.</h2>
+    <p class="landing-showcase-sub">Every time you lift your hands, Drift captures a snapshot. Click any moment to see exactly what changed &mdash; additions in green, deletions in red.</p>
+
+    <div class="showcase-snapshot-grid">
+      <div class="showcase-snapshot-list" id="showcaseSnapshotList">
+        <div class="showcase-snapshot-item active" data-index="0">
+          <div class="showcase-snapshot-hash">a3f1c2d</div>
+          <div class="showcase-snapshot-msg">first draft</div>
+          <div class="showcase-snapshot-time">#1</div>
+        </div>
+        <div class="showcase-snapshot-item" data-index="1">
+          <div class="showcase-snapshot-hash">b7e4a19</div>
+          <div class="showcase-snapshot-msg">revised image</div>
+          <div class="showcase-snapshot-time">#2</div>
+        </div>
+        <div class="showcase-snapshot-item" data-index="2">
+          <div class="showcase-snapshot-hash">c9d0f53</div>
+          <div class="showcase-snapshot-msg">final ending</div>
+          <div class="showcase-snapshot-time">#3</div>
+        </div>
+      </div>
+
+      <div class="showcase-diff-panel">
+        <div class="showcase-diff-header">
+          <span class="showcase-diff-title" id="showcaseDiffTitle">a3f1c2d &mdash; first draft</span>
+        </div>
+        <div class="showcase-diff-body" id="showcaseDiffBody">
+          <span class="diff-added">old pond</span><br>
+          <span class="diff-added">a frog leaps in</span><br>
+          <span class="diff-added">water's sound</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Showcase: Delete & Reorder ─── -->
+  <section class="landing-showcase landing-showcase-organize">
+    <span class="landing-label">ORGANIZE YOUR HISTORY</span>
+    <h2 class="landing-showcase-heading">Your process, your rules.</h2>
+    <p class="landing-showcase-sub">Drag snapshots to reorder your creative history, or delete the ones that no longer serve the poem. Full control over your manuscript's lineage.</p>
+
+    <div class="showcase-organize-grid">
+      <div class="showcase-organize-card">
+        <div class="showcase-card-label">REORDER</div>
+        <div class="showcase-mock-list">
+          <div class="showcase-mock-item mock-drag-over-bottom">
+            <span class="mock-hash">a3f1c2d</span>
+            <span class="mock-msg">first draft</span>
+          </div>
+          <div class="showcase-mock-item mock-dragging">
+            <span class="mock-hash">b7e4a19</span>
+            <span class="mock-msg">revised image</span>
+          </div>
+          <div class="showcase-mock-item">
+            <span class="mock-hash">c9d0f53</span>
+            <span class="mock-msg">final ending</span>
+          </div>
+        </div>
+        <p class="showcase-card-desc">Rearrange the order of your snapshots to reshape the narrative of how your poem came to be. Perfect for curating a playback that tells the right story.</p>
+      </div>
+
+      <div class="showcase-organize-card">
+        <div class="showcase-card-label">DELETE</div>
+        <div class="showcase-mock-list">
+          <div class="showcase-mock-item">
+            <span class="mock-hash">a3f1c2d</span>
+            <span class="mock-msg">first draft</span>
+          </div>
+          <div class="showcase-mock-item mock-selected">
+            <span class="mock-hash">b7e4a19</span>
+            <span class="mock-msg">revised image</span>
+          </div>
+          <div class="showcase-mock-item">
+            <span class="mock-hash">c9d0f53</span>
+            <span class="mock-msg">final ending</span>
+          </div>
+          <div class="showcase-action-bar">
+            <span>1 selected</span>
+            <span class="mock-btn">delete</span>
+            <span class="mock-btn">cancel</span>
+          </div>
+        </div>
+        <p class="showcase-card-desc">Remove false starts and dead ends. Keep only the moments that matter, without losing the integrity of your remaining history.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Showcase: Writing Surface ─── -->
+  <section class="landing-showcase landing-showcase-surface">
+    <span class="landing-label">THE WRITING SURFACE</span>
+    <h2 class="landing-showcase-heading">A workspace designed<br>to disappear.</h2>
+    <p class="landing-showcase-sub">No toolbars. No clutter. Just your words against the dark paper &mdash; with subtle formatting tools that appear only when you need them.</p>
+
+    <div class="showcase-surface-mockup">
+      <div class="showcase-surface-header">
+        <span class="mock-filename">ode-to-autumn.txt</span>
+        <span class="mock-status">writing</span>
+      </div>
+      <div class="showcase-surface-body">
+        <div class="showcase-bubble-menu">
+          <span class="bubble-btn"><b>B</b></span>
+          <span class="bubble-btn mock-active"><i>I</i></span>
+          <span class="bubble-btn">U</span>
+          <span class="bubble-sep"></span>
+          <span class="bubble-btn">S</span>
+          <span class="bubble-btn">X&sup2;</span>
+          <span class="bubble-btn">X&sub2;</span>
+        </div>
+        <div class="showcase-surface-text">
+          Season of mists and <span class="text-selection">mellow fruitfulness</span>,<br>
+          Close bosom-friend of the maturing sun;<br>
+          Conspiring with him how to load and bless<br>
+          With fruit the vines that round the thatch-eaves run.
+        </div>
+      </div>
+      <div class="showcase-surface-footer">
+        free-verse &middot; 4 lines &middot; 38 words
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Showcase: Poetry Forms ─── -->
+  <section class="landing-showcase landing-showcase-forms">
+    <span class="landing-label">POETRY FORMS</span>
+    <h2 class="landing-showcase-heading">A library of forms,<br>validated in real time.</h2>
+    <p class="landing-showcase-sub">Choose from dozens of global poetic forms. Drift counts syllables, tracks rhyme schemes, and validates your structure as you write &mdash; with contextual history and guidance at your fingertips.</p>
+
+    <div class="showcase-forms-mockup">
+      <div class="showcase-forms-header">
+        <span class="mock-form-select">Haiku</span>
+        <span class="mock-form-desc">5 &mdash; 7 &mdash; 5</span>
+        <span class="mock-info-btn">&#8505; info</span>
+      </div>
+      <div class="showcase-forms-body">
+        <div class="showcase-forms-gutter">
+          <div class="showcase-gutter-row">
+            <span class="gutter-syl match">5</span>
+            <span class="gutter-rhyme">&mdash;</span>
+            <span class="gutter-num">1</span>
+          </div>
+          <div class="showcase-gutter-row">
+            <span class="gutter-syl match">7</span>
+            <span class="gutter-rhyme">&mdash;</span>
+            <span class="gutter-num">2</span>
+          </div>
+          <div class="showcase-gutter-row">
+            <span class="gutter-syl match">5</span>
+            <span class="gutter-rhyme">&mdash;</span>
+            <span class="gutter-num">3</span>
+          </div>
+        </div>
+        <div class="showcase-forms-editor">
+          <div class="form-line">an old silent pond</div>
+          <div class="form-line">a frog jumps into the pond</div>
+          <div class="form-line">splash! silence again</div>
+        </div>
+        <div class="showcase-forms-sidebar">
+          <div class="sidebar-form-name">Haiku</div>
+          <div class="sidebar-origin">Japan</div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">SUMMARY</div>
+            <div class="sidebar-section-text">Three-line Japanese form capturing a moment in nature through a seasonal image and a cutting juxtaposition.</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">HISTORY</div>
+            <div class="sidebar-section-text">Evolved from the opening verse of collaborative linked-verse poetry in 17th-century Japan. Matsuo Bash&#333; elevated it to a standalone art form.</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">ETHOS</div>
+            <div class="sidebar-section-text">Presence, brevity, seasonal awareness. The haiku seeks to dissolve the boundary between observer and observed.</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">CONSTRAINTS</div>
+            <div class="sidebar-section-text">Traditional: requires kigo (seasonal word) and kireji (cutting word).</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">NOTABLE POETS</div>
+            <div class="sidebar-poets">Matsuo Bash&#333;, Yosa Buson, Kobayashi Issa, Masaoka Shiki</div>
+          </div>
+        </div>
+      </div>
+      <div class="showcase-forms-footer">
+        <span class="beat">5/5</span> &middot;
+        <span class="beat">7/7</span> &middot;
+        <span class="beat">5/5</span>
+        <span class="form-complete">&#10003;</span>
+      </div>
+    </div>
+  </section>
+
   <section class="landing-final-cta">
     <h2 class="landing-cta-heading"><em>Your words are waiting.</em></h2>
     <p class="landing-cta-sub">Join the growing community of poets who value the process as much as the poem.</p>
