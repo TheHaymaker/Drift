@@ -53,7 +53,7 @@ export function showDeleteModal(indices) {
 
 squashSelectedBtn.addEventListener("click", () => {
   if (state.selectedCommits.size < 2) return;
-  if (!state.gitClient || !state.currentDocId || !state.currentFilename) {
+  if (!state.currentDocId || !state.currentFilename) {
     showToast("squash unavailable");
     return;
   }
@@ -80,20 +80,33 @@ squashModalConfirm.addEventListener("click", async () => {
   const message = latestCommit ? latestCommit.message : "";
   try {
     showToast("squashing\u2026");
-    const result = await state.gitClient.squash({
-      docId: state.currentDocId,
-      filename: state.currentFilename,
-      fromIndex,
-      toIndex,
-      message,
-    });
-    if (result && result.log) {
-
-      renderCommits(result.log);
-      setEditorContent(result.content);
-      showToast("squashed " + (toIndex - fromIndex + 1) + " snapshots into 1");
+    let log, content;
+    if (state.gitClient) {
+      const result = await state.gitClient.squash({
+        docId: state.currentDocId,
+        filename: state.currentFilename,
+        fromIndex,
+        toIndex,
+        message,
+      });
+      if (!result || !result.log) return;
+      log = result.log;
+      content = result.content;
       if (state.syncClient) state.syncClient.fullSync();
+    } else {
+      const res = await fetch(`/api/documents/${state.currentDocId}/history/squash`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromIndex, toIndex, message }),
+      });
+      if (!res.ok) throw new Error(`server returned ${res.status}`);
+      const data = await res.json();
+      log = data.log;
+      content = data.content;
     }
+    renderCommits(log);
+    setEditorContent(content);
+    showToast("squashed " + (toIndex - fromIndex + 1) + " snapshots into 1");
   } catch (err) {
     showToast("squash failed: " + err.message);
   } finally {
@@ -109,7 +122,7 @@ squashModalCancel.addEventListener("click", () => {
 
 deleteModalConfirm.addEventListener("click", async () => {
   deleteModal.classList.add("hidden");
-  if (!state.pendingDeleteIndices || !state.gitClient || !state.currentDocId || !state.currentFilename) {
+  if (!state.pendingDeleteIndices || !state.currentDocId || !state.currentFilename) {
     showToast("delete unavailable");
     return;
   }
@@ -117,18 +130,31 @@ deleteModalConfirm.addEventListener("click", async () => {
   state.pendingDeleteIndices = null;
   try {
     showToast("deleting\u2026");
-    const result = await state.gitClient.deleteCommits({
-      docId: state.currentDocId,
-      filename: state.currentFilename,
-      indices,
-    });
-    if (result && result.log) {
-
-      renderCommits(result.log);
-      setEditorContent(result.content);
-      showToast("deleted " + indices.length + " snapshot" + (indices.length > 1 ? "s" : ""));
+    let log, content;
+    if (state.gitClient) {
+      const result = await state.gitClient.deleteCommits({
+        docId: state.currentDocId,
+        filename: state.currentFilename,
+        indices,
+      });
+      if (!result || !result.log) return;
+      log = result.log;
+      content = result.content;
       if (state.syncClient) state.syncClient.fullSync();
+    } else {
+      const res = await fetch(`/api/documents/${state.currentDocId}/history/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ indices }),
+      });
+      if (!res.ok) throw new Error(`server returned ${res.status}`);
+      const data = await res.json();
+      log = data.log;
+      content = data.content;
     }
+    renderCommits(log);
+    setEditorContent(content);
+    showToast("deleted " + indices.length + " snapshot" + (indices.length > 1 ? "s" : ""));
   } catch (err) {
     showToast("delete failed: " + err.message);
   } finally {
