@@ -2,11 +2,12 @@
 import { state } from '../state.js';
 import { initDemo, destroyDemo } from './demo.js';
 import { showAuth } from '../auth.js';
+import { generateDisintegrationMask, MASK_FRAMES } from '../disintegration-mask.js';
 
 export function destroyLanding() {
   destroyDemo();
   destroySnapshotCycle();
-  destroyRadialBurst();
+  destroyDisintegrateShowcase();
 }
 export { destroyLanding as destroyDemo };
 
@@ -64,37 +65,39 @@ function destroySnapshotCycle() {
   }
 }
 
-/* ─── Radial burst scroll animation ─── */
+/* ─── Disintegration mask scroll showcase ─── */
 
-let radialBurstCleanup = null;
+let disintegrateCleanup = null;
 
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
+function initDisintegrateShowcase() {
+  const container = document.getElementById('disintegrateShowcase');
+  const word = document.getElementById('disintegrateWord');
+  if (!container || !word) return;
 
-function initRadialBurst() {
-  const art = document.getElementById('radialArt');
-  const burst = document.getElementById('radialBurst');
-  if (!art || !burst) return;
+  const maskUrl = generateDisintegrationMask();
+  word.style.maskImage = `url(${maskUrl})`;
+  word.style.webkitMaskImage = `url(${maskUrl})`;
+
+  // Start fully transparent (frame 23)
+  word.style.maskPosition = '100% 0';
+  word.style.webkitMaskPosition = '100% 0';
 
   let ticking = false;
 
   function update() {
-    const rect = art.getBoundingClientRect();
+    const rect = container.getBoundingClientRect();
     const viewH = window.innerHeight;
-    // progress: 0 when element enters bottom of viewport, 1 when top reaches 30% from top
+    // progress: 0 when container enters bottom of viewport, 1 when top reaches 30% from top
     const raw = 1 - (rect.top - viewH * 0.3) / (viewH * 0.7);
     const t = Math.max(0, Math.min(1, raw));
 
-    // Ease out cubic for smoother feel
-    const eased = 1 - Math.pow(1 - t, 3);
-
-    burst.style.setProperty('--burst-scale', lerp(0.4, 1, eased));
-    burst.style.setProperty('--burst-rotation', lerp(90, 0, eased) + 'deg');
-    burst.style.setProperty('--burst-opacity', lerp(0.15, 0.6, eased));
-    burst.style.setProperty('--burst-mask-inner', lerp(45, 15, eased) + '%');
-    burst.style.setProperty('--burst-mask-mid', lerp(60, 35, eased) + '%');
-    burst.style.setProperty('--burst-blur', lerp(4, 0, eased) + 'px');
+    // Snap to nearest frame for the stepped pixel effect
+    const frame = Math.round(t * (MASK_FRAMES - 1));
+    // Materialize: frame 0 = fully visible (0%), frame 23 = fully transparent (100%)
+    // As t goes 0→1, we want mask-position to go from 100% (hidden) to 0% (visible)
+    const pos = ((MASK_FRAMES - 1 - frame) / (MASK_FRAMES - 1)) * 100;
+    word.style.maskPosition = `${pos}% 0`;
+    word.style.webkitMaskPosition = `${pos}% 0`;
 
     ticking = false;
   }
@@ -109,15 +112,15 @@ function initRadialBurst() {
   window.addEventListener('scroll', onScroll, { passive: true });
   update(); // set initial state
 
-  radialBurstCleanup = () => {
+  disintegrateCleanup = () => {
     window.removeEventListener('scroll', onScroll);
   };
 }
 
-function destroyRadialBurst() {
-  if (radialBurstCleanup) {
-    radialBurstCleanup();
-    radialBurstCleanup = null;
+function destroyDisintegrateShowcase() {
+  if (disintegrateCleanup) {
+    disintegrateCleanup();
+    disintegrateCleanup = null;
   }
 }
 
@@ -134,7 +137,7 @@ export async function showLanding() {
   updateLandingNav();
   initDemo();
   initSnapshotCycle();
-  initRadialBurst();
+  initDisintegrateShowcase();
 }
 
 export function updateLandingNav() {
