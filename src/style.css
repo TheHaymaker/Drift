@@ -2355,6 +2355,14 @@ input[type="range"]::-webkit-slider-thumb {
     padding-top: 0;
   }
 
+  .landing-disintegrate-showcase {
+    max-width: 100%;
+  }
+
+  .disintegrate-line {
+    font-size: 2.5rem;
+  }
+
   .landing-experience {
     padding: 60px 20px;
   }
