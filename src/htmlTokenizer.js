@@ -14,7 +14,7 @@ function getDefaultColor() {
 
 // ── Style helpers ────────────────────────────────────────────────────────────
 
-const TAG_STYLES = {
+export const TAG_STYLES = {
   strong: 'font-weight:700',
   b:      'font-weight:700',
   em:     'font-style:italic',
@@ -25,7 +25,7 @@ const TAG_STYLES = {
   sub:    'vertical-align:sub;font-size:0.8em',
 };
 
-function mergeStyle(existing, addition) {
+export function mergeStyle(existing, addition) {
   if (!existing) return addition;
   // Handle multiple text-decoration values
   if (existing.includes('text-decoration:') && addition.includes('text-decoration:')) {
