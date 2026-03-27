@@ -391,9 +391,26 @@ body {
   display: flex;
   align-items: baseline;
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
   flex-shrink: 0;
+}
+
+.editor-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.editor-subheader-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editor-subheader .logout-btn {
+  position: static;
 }
 
 .editor-title {
@@ -705,11 +722,19 @@ textarea::selection {
 }
 
 .commit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 10px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
   border-left: 2px solid transparent;
+}
+
+.commit-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .commit-item:hover {
@@ -761,7 +786,7 @@ textarea::selection {
 .commit-actions {
   display: none;
   gap: 4px;
-  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .commit-item:hover .commit-actions {
@@ -955,6 +980,7 @@ textarea::selection {
   user-select: none;
   opacity: 0;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
 .commit-item:hover .drag-handle {
@@ -1048,9 +1074,6 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .connection {
-  position: fixed;
-  top: 16px;
-  right: 300px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.5rem;
   color: var(--text-faint);
@@ -3310,9 +3333,6 @@ input[type="range"]::-webkit-slider-thumb {
   top: 4px;
 }
 
-.editor-settings-gear {
-  margin-left: 4px;
-}
 
 /* ─── Settings View ─── */
 .settings-view {

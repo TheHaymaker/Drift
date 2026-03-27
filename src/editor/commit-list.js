@@ -41,9 +41,11 @@ export function createCommitItem(c, isNew, log) {
   const logLen = log ? log.length : state.commitLog.length;
   div.innerHTML =
     '<span class="drag-handle" draggable="true">⠿</span>' +
-    '<div class="commit-hash">' + c.hash + '</div>' +
-    '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
-    '<div class="commit-time">#' + (c.index + 1) + '</div>' +
+    '<div class="commit-content">' +
+      '<div class="commit-hash">' + c.hash + '</div>' +
+      '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
+      '<div class="commit-time">#' + (c.index + 1) + '</div>' +
+    '</div>' +
     '<div class="commit-actions">' +
       (logLen > 1 ? '<button class="commit-delete-btn">delete</button>' : '') +
     '</div>';
