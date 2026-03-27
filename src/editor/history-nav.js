@@ -2,6 +2,7 @@
 import { state } from '../state.js';
 import { showToast } from '../toast.js';
 import { renderDiff } from './diff-panel.js';
+import { stripHtml, isHtml } from '../htmlUtils.js';
 
 export async function fetchSnapshot(hash) {
   if (state.gitClient && state.currentDocId && state.currentFilename) {
@@ -18,22 +19,23 @@ export async function fetchDiff(hashA, hashB) {
   if (state.gitClient && state.currentDocId && state.currentFilename) {
     try {
       const result = await state.gitClient.getStructuredDiff({ docId: state.currentDocId, filename: state.currentFilename, hashA, hashB });
-      return result.segments;
+      return result; // { segments, rawA, rawB }
     } catch { /* fall through */ }
   }
   const d = await fetch("/api/documents/" + state.currentDocId + "/structured-diff/" + hashA + "/" + hashB).then(r => r.json());
-  return d.segments;
+  return { segments: d.segments }; // server fallback: no rawA/rawB
 }
 
 // Show diff for a commit without changing editor content or entering nav mode
 export async function showCommitDiff(c) {
   if (c.index > 0) {
     const prev = state.commitLog[c.index - 1];
-    const diffSegments = await fetchDiff(prev.hash, c.hash);
-    renderDiff(diffSegments, c);
+    const result = await fetchDiff(prev.hash, c.hash);
+    renderDiff(result.segments, c, { rawA: result.rawA, rawB: result.rawB });
   } else {
     const snapContent = await fetchSnapshot(c.hash);
-    renderDiff(snapContent ? [{ type: "added", text: snapContent }] : [], c);
+    const text = snapContent && isHtml(snapContent) ? stripHtml(snapContent) : snapContent;
+    renderDiff(text ? [{ type: "added", text: text + "\n" }] : [], c, { rawB: snapContent });
   }
 }
 

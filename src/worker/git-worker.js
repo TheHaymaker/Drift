@@ -355,7 +355,7 @@ async function handleGetStructuredDiff({ docId, filename, hashA, hashB }) {
     .content;
   const contentB = (await handleGetFileAt({ docId, filename, hash: hashB }))
     .content;
-  return { segments: structuredDiff(contentA, contentB) };
+  return { segments: structuredDiff(contentA, contentB), rawA: contentA, rawB: contentB };
 }
 
 async function handleClone({ docId, filename, commits }) {
