@@ -22,9 +22,9 @@ export function createCommitItem(c, isNew, log) {
   div.className = cls;
   div.dataset.hash = c.hash;
   div.dataset.index = c.index;
-  div.draggable = true;
   const logLen = log ? log.length : state.commitLog.length;
   div.innerHTML =
+    '<span class="drag-handle" draggable="true">⠿</span>' +
     '<div class="commit-hash">' + c.hash + '</div>' +
     '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
     '<div class="commit-time">#' + (c.index + 1) + '</div>' +
@@ -60,6 +60,9 @@ export function renderCommits(log, newHash) {
 
 // Event delegation — single click listener on commit list
 commitList.addEventListener("click", async (e) => {
+  // Ignore clicks on the drag handle
+  if (e.target.classList.contains("drag-handle")) return;
+
   // Handle inline delete button clicks
   if (e.target.classList.contains("commit-delete-btn")) {
     e.stopPropagation();
@@ -107,8 +110,9 @@ commitList.addEventListener("click", async (e) => {
   if (_showCommitDiff) await _showCommitDiff(state.commitLog[index]);
 });
 
-// Drag-and-drop delegation on commit list
+// Drag-and-drop delegation — only the drag handle initiates drags
 commitList.addEventListener("dragstart", (e) => {
+  if (!e.target.classList.contains("drag-handle")) { e.preventDefault(); return; }
   const item = e.target.closest(".commit-item");
   if (!item) return;
   const index = parseInt(item.dataset.index, 10);
