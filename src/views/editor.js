@@ -43,6 +43,8 @@ const syllableEditorMount = document.getElementById("syllableEditorMount");
 const sidebarToggle = document.getElementById("sidebarToggle");
 const sidebar = document.querySelector(".sidebar");
 const editorViewEl = document.getElementById("editorView");
+const lineNumBtn = document.getElementById("lineNumBtn");
+const editorPane = document.querySelector(".editor-pane");
 
 // Restore collapsed state from localStorage
 if (sidebar && sidebarToggle && editorViewEl) {
@@ -58,6 +60,28 @@ if (sidebar && sidebarToggle && editorViewEl) {
     localStorage.setItem("sidebarCollapsed", collapsed);
   });
 }
+
+// ── Line number toggle ──
+if (lineNumBtn && editorPane) {
+  if (localStorage.getItem("drift-showLineNums") === "true") {
+    editorPane.classList.add("show-line-nums");
+    lineNumBtn.classList.add("active");
+  }
+  lineNumBtn.addEventListener("click", () => {
+    const active = editorPane.classList.toggle("show-line-nums");
+    lineNumBtn.classList.toggle("active", active);
+    localStorage.setItem("drift-showLineNums", active);
+  });
+}
+
+// ── Mini sidebar action buttons ──
+const miniForceCommitBtn = document.getElementById("miniForceCommitBtn");
+const miniPlaybackBtn = document.getElementById("miniPlaybackBtn");
+const miniExportBtn = document.getElementById("miniExportBtn");
+
+miniForceCommitBtn?.addEventListener("click", () => forceCommitBtn?.click());
+miniPlaybackBtn?.addEventListener("click", () => document.getElementById("playbackBtn")?.click());
+miniExportBtn?.addEventListener("click", () => exportBtn?.click());
 
 export function setEditorEditable(editable) {
   editor.readOnly = !editable;

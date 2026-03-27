@@ -381,8 +381,10 @@ body {
 .editor-pane {
   display: flex;
   flex-direction: column;
-  padding: 48px 60px 60px;
+  padding: 48px 60px 0;
   position: relative;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .editor-header {
@@ -391,6 +393,7 @@ body {
   gap: 16px;
   margin-bottom: 32px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .editor-title {
@@ -615,6 +618,36 @@ textarea::selection {
   letter-spacing: 0.08em;
 }
 
+.sidebar-mini-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.sidebar-mini-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.sidebar-mini-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .sidebar-title {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.56rem;
@@ -631,6 +664,28 @@ textarea::selection {
   margin-bottom: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.commit-count:hover {
+  color: var(--text);
+}
+
+.commits-toggle-icon {
+  font-size: 0.5rem;
+  display: inline-block;
+  transition: transform 0.2s ease;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.commits-toggle-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.commits.collapsed {
+  display: none;
 }
 
 .commit-count span {
@@ -3101,6 +3156,7 @@ input[type="range"]::-webkit-slider-thumb {
   flex: 1;
   min-height: 0;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 #standaloneEditorMount.visible {
@@ -3119,8 +3175,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* Standalone (non-syllable) mode — match the old textarea styling */
 #standaloneEditorMount .ProseMirror {
   width: 100%;
-  min-height: 500px;
-  height: 100%;
+  min-height: 100%;
   background: transparent;
   border: none;
   outline: none;
@@ -3130,7 +3185,7 @@ input[type="range"]::-webkit-slider-thumb {
   line-height: 2;
   letter-spacing: 0.01em;
   caret-color: var(--accent);
-  padding: 0;
+  padding: 0 0 60px;
 }
 
 /* Syllable mode — match the old syl-textarea styling */
@@ -3562,4 +3617,37 @@ input[type="range"]::-webkit-slider-thumb {
   top: 16px;
   right: 20px;
   z-index: 10;
+}
+
+/* ==========================================================================
+   LINE NUMBERS (independent toggle, both modes)
+   ========================================================================== */
+
+/* Standalone ProseMirror — CSS counter-based line numbers */
+.editor-pane.show-line-nums #standaloneEditorMount .ProseMirror {
+  counter-reset: line-number;
+}
+
+.editor-pane.show-line-nums #standaloneEditorMount .ProseMirror > * {
+  counter-increment: line-number;
+  position: relative;
+  margin-left: 2.5em;
+}
+
+.editor-pane.show-line-nums #standaloneEditorMount .ProseMirror > *::before {
+  content: counter(line-number);
+  position: absolute;
+  left: -2.5em;
+  width: 2em;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-faint);
+  opacity: 0.45;
+  top: 0.85em;
+}
+
+/* Syllable gutter — hide line nums when toggle is off */
+.editor-pane:not(.show-line-nums) .gutter-linenum {
+  display: none;
 }
