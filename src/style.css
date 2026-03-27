@@ -2040,6 +2040,24 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* ─── Section 4: Poetry Forms ─── */
 
+.showcase-forms-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 40px;
+}
+
+.region-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+
 .showcase-forms-mockup {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -2444,6 +2462,16 @@ input[type="range"]::-webkit-slider-thumb {
 
   .showcase-bubble-menu {
     left: 40px;
+  }
+
+  .showcase-forms-regions {
+    gap: 6px;
+    margin-bottom: 32px;
+  }
+
+  .region-tag {
+    font-size: 0.48rem;
+    padding: 3px 10px;
   }
 
   .showcase-forms-body {
