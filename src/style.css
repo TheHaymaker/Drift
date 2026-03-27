@@ -667,11 +667,37 @@ textarea::selection {
 }
 
 .commit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 10px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
   border-left: 2px solid transparent;
+}
+
+.commit-handle {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity 0.2s;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.commit-item:hover .commit-handle {
+  opacity: 1;
+}
+
+.commit-item[draggable="true"]:active .commit-handle {
+  cursor: grabbing;
+}
+
+.commit-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .commit-item:hover {
@@ -723,7 +749,7 @@ textarea::selection {
 .commit-actions {
   display: none;
   gap: 4px;
-  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .commit-item:hover .commit-actions {
