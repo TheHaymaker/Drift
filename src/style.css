@@ -1165,6 +1165,22 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 32px;
 }
 
+.landing-theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  line-height: 1;
+  transition: color 0.2s, border-color 0.2s;
+}
+.landing-theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
 .landing-nav-link {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem;
@@ -3087,7 +3103,7 @@ input[type="range"]::-webkit-slider-thumb {
   outline: none;
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 1.25rem;
+  font-size: var(--font-editor-size);
   line-height: 2;
   letter-spacing: 0.01em;
   caret-color: var(--accent);

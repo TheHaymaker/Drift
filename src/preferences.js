@@ -10,6 +10,23 @@ export const FONT_MAP = {
 export function applyTheme(pref) {
   document.documentElement.setAttribute('data-theme', pref);
   localStorage.setItem('drift-theme', pref);
+  updateThemeToggleIcon();
+}
+
+export function getEffectiveTheme() {
+  const stored = localStorage.getItem('drift-theme') || 'system';
+  if (stored === 'system') {
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  return stored;
+}
+
+export function updateThemeToggleIcon() {
+  const btn = document.getElementById('landingThemeToggle');
+  if (!btn) return;
+  const effective = getEffectiveTheme();
+  // ☀ for dark (clicking will switch to light), ☾ for light (clicking will switch to dark)
+  btn.textContent = effective === 'dark' ? '\u2600' : '\u263E';
 }
 
 export function applyFont(key) {
@@ -30,7 +47,7 @@ export function applyPlaybackFontSize(rem) {
 
 export function initPreferences() {
   // Theme
-  const theme = localStorage.getItem('drift-theme') || 'dark';
+  const theme = localStorage.getItem('drift-theme') || 'system';
   document.documentElement.setAttribute('data-theme', theme);
 
   // Font family
@@ -44,11 +61,14 @@ export function initPreferences() {
 
   const playbackSize = localStorage.getItem('drift-playback-font-size') || '1.45';
   document.documentElement.style.setProperty('--font-playback-size', playbackSize + 'rem');
+
+  // Set theme toggle icon
+  updateThemeToggleIcon();
 }
 
 export function populateSettings() {
   // Theme
-  const theme = localStorage.getItem('drift-theme') || 'dark';
+  const theme = localStorage.getItem('drift-theme') || 'system';
   setActiveSegmented('themePicker', theme);
 
   // Font
@@ -149,4 +169,11 @@ document.getElementById('speedPicker')?.addEventListener('click', (e) => {
   if (!btn) return;
   localStorage.setItem('drift-default-speed', btn.dataset.value);
   setActiveSegmented('speedPicker', btn.dataset.value);
+});
+
+// Landing nav theme toggle
+document.getElementById('landingThemeToggle')?.addEventListener('click', () => {
+  const effective = getEffectiveTheme();
+  // Toggle: if currently dark → light, if currently light → dark
+  applyTheme(effective === 'dark' ? 'light' : 'dark');
 });
