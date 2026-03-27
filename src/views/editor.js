@@ -44,6 +44,7 @@ const sidebarToggle = document.getElementById("sidebarToggle");
 const sidebar = document.querySelector(".sidebar");
 const editorViewEl = document.getElementById("editorView");
 const lineNumBtn = document.getElementById("lineNumBtn");
+const minimapToggleBtn = document.getElementById("minimapToggleBtn");
 const editorPane = document.querySelector(".editor-pane");
 
 // Restore collapsed state from localStorage
@@ -71,6 +72,20 @@ if (lineNumBtn && editorPane) {
     const active = editorPane.classList.toggle("show-line-nums");
     lineNumBtn.classList.toggle("active", active);
     localStorage.setItem("drift-showLineNums", active);
+  });
+}
+
+// ── Minimap toggle ──
+if (minimapToggleBtn) {
+  if (localStorage.getItem("drift-minimap") === "true") {
+    minimapToggleBtn.classList.add("active");
+  }
+  minimapToggleBtn.addEventListener("click", () => {
+    const active = localStorage.getItem("drift-minimap") !== "true";
+    minimapToggleBtn.classList.toggle("active", active);
+    localStorage.setItem("drift-minimap", active);
+    // Notify whichever React editor is mounted
+    editor.dispatchEvent(new CustomEvent("_minimap-toggle", { detail: active }));
   });
 }
 
@@ -167,6 +182,7 @@ export function mountStandaloneEditor() {
   function StandaloneWrapper() {
     const [html, setHtml] = useState(state.currentHtml || contentToHtml(editor.value));
     const [editable, setEditable] = useState(!editor.readOnly);
+    const [showMinimap, setShowMinimap] = useState(localStorage.getItem('drift-minimap') === 'true');
 
     useEffect(() => {
       const sync = () => setHtml(state.currentHtml || contentToHtml(editor.value));
@@ -178,6 +194,12 @@ export function mountStandaloneEditor() {
       const onEditable = (e) => setEditable(e.detail);
       editor.addEventListener("_syl-editable", onEditable);
       return () => editor.removeEventListener("_syl-editable", onEditable);
+    }, []);
+
+    useEffect(() => {
+      const onToggle = (e) => setShowMinimap(e.detail);
+      editor.addEventListener("_minimap-toggle", onToggle);
+      return () => editor.removeEventListener("_minimap-toggle", onToggle);
     }, []);
 
     const handleUpdate = useCallback((newHtml, plainText) => {
@@ -192,6 +214,7 @@ export function mountStandaloneEditor() {
       placeholder: "begin writing. drift commits when you pause.",
       autoFocus: true,
       editable,
+      showMinimap,
     });
   }
   state.standaloneEditorRoot.render(createElement(StandaloneWrapper));

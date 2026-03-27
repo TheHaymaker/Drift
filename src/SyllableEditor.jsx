@@ -344,10 +344,20 @@ function FormStatus({ lines, rhymeGroups, form }) {
 export default function SyllableEditor({ value, htmlContent, onChange, onHtmlChange, initialFormKey, onFormKeyChange, editable = true }) {
   const [formKey, setFormKey] = useState(initialFormKey || 'haiku');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(() => localStorage.getItem('drift-minimap') === 'true');
   const [, forceUpdate] = useState(0);
 
   const formDef = POETRY_FORMS[formKey];
   const { lines, rhymeGroups } = analyzeText(value, formDef);
+
+  // Listen for minimap toggle from header button
+  useEffect(() => {
+    const el = document.getElementById('editor');
+    if (!el) return;
+    const onToggle = (e) => setShowMinimap(e.detail);
+    el.addEventListener('_minimap-toggle', onToggle);
+    return () => el.removeEventListener('_minimap-toggle', onToggle);
+  }, []);
 
   // Re-render when CMU data arrives
   useEffect(() => {
@@ -439,6 +449,7 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
             placeholder="begin writing..."
             autoFocus
             editable={editable}
+            showMinimap={showMinimap}
           />
         </div>
 
