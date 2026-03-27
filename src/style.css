@@ -892,11 +892,21 @@ textarea::selection {
 
 /* ─── Drag-and-Drop Reorder ─── */
 
-.commit-item[draggable="true"] {
+.drag-handle {
   cursor: grab;
+  color: var(--text-faint);
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.commit-item[draggable="true"]:active {
+.commit-item:hover .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle:active {
   cursor: grabbing;
 }
 
