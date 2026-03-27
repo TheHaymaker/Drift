@@ -368,8 +368,17 @@
       <span class="editor-title" id="backBtn">drift</span>
       <span class="editor-filename" id="filename">poem.txt</span>
       <button class="syl-mode-btn" id="sylModeBtn" title="Toggle invisible hand / forms">invisible hand / forms</button>
-      <a class="settings-gear editor-settings-gear" href="#/settings" title="settings">&#9881; settings</a>
       <span class="status-pill" id="status">connecting</span>
+    </div>
+    <div class="editor-subheader">
+      <div class="connection" id="connStatus">
+        <div class="connection-dot" id="connDot"></div>
+        <span id="connLabel">connecting</span>
+      </div>
+      <div class="editor-subheader-actions">
+        <a class="settings-gear" href="#/settings" title="settings">&#9881; settings</a>
+        <button class="auth-toggle logout-btn" id="editorLogoutBtn">log out</button>
+      </div>
     </div>
     <div class="editor-area">
       <textarea
@@ -547,10 +556,6 @@
   <a href="#/poems" class="settings-back">&larr; back to poems</a>
 </div>
 
-<div class="connection hidden" id="connStatus">
-  <div class="connection-dot" id="connDot"></div>
-  <span id="connLabel">connecting</span>
-</div>
 
 <!-- ─── Playback View (React mount) ─── -->
 <div class="hidden" id="playbackView"></div>

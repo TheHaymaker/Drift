@@ -83,9 +83,11 @@ authForm.addEventListener("submit", async (e) => {
   }
 });
 
-logoutBtn.addEventListener("click", async () => {
+async function handleLogout() {
   await fetch("/api/auth/logout", { method: "POST" });
   state.currentUser = null;
   location.hash = "#/";
   _route();
-});
+}
+logoutBtn.addEventListener("click", handleLogout);
+document.getElementById("editorLogoutBtn").addEventListener("click", handleLogout);

@@ -389,8 +389,25 @@ body {
   display: flex;
   align-items: baseline;
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.editor-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.editor-subheader-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editor-subheader .logout-btn {
+  position: static;
 }
 
 .editor-title {
@@ -983,9 +1000,6 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .connection {
-  position: fixed;
-  top: 16px;
-  right: 300px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.5rem;
   color: var(--text-faint);
@@ -3245,9 +3259,6 @@ input[type="range"]::-webkit-slider-thumb {
   top: 4px;
 }
 
-.editor-settings-gear {
-  margin-left: 4px;
-}
 
 /* ─── Settings View ─── */
 .settings-view {
