@@ -44,6 +44,7 @@ const sidebarToggle = document.getElementById("sidebarToggle");
 const sidebar = document.querySelector(".sidebar");
 const editorViewEl = document.getElementById("editorView");
 const lineNumBtn = document.getElementById("lineNumBtn");
+const minimapToggleBtn = document.getElementById("minimapToggleBtn");
 const editorPane = document.querySelector(".editor-pane");
 
 // Restore collapsed state from localStorage
@@ -71,6 +72,20 @@ if (lineNumBtn && editorPane) {
     const active = editorPane.classList.toggle("show-line-nums");
     lineNumBtn.classList.toggle("active", active);
     localStorage.setItem("drift-showLineNums", active);
+  });
+}
+
+// ── Minimap toggle ──
+if (minimapToggleBtn) {
+  if (localStorage.getItem("drift-minimap") === "true") {
+    minimapToggleBtn.classList.add("active");
+  }
+  minimapToggleBtn.addEventListener("click", () => {
+    const active = localStorage.getItem("drift-minimap") !== "true";
+    minimapToggleBtn.classList.toggle("active", active);
+    localStorage.setItem("drift-minimap", active);
+    // Notify whichever React editor is mounted
+    editor.dispatchEvent(new CustomEvent("_minimap-toggle", { detail: active }));
   });
 }
 
@@ -181,21 +196,10 @@ export function mountStandaloneEditor() {
       return () => editor.removeEventListener("_syl-editable", onEditable);
     }, []);
 
-    // Listen for minimap toggle from header button
     useEffect(() => {
-      const btn = document.getElementById("minimapToggleBtn");
-      if (!btn) return;
-      const handler = () => {
-        setShowMinimap((v) => {
-          const next = !v;
-          localStorage.setItem('drift-minimap', next);
-          btn.classList.toggle('active', next);
-          return next;
-        });
-      };
-      btn.addEventListener("click", handler);
-      btn.classList.toggle('active', localStorage.getItem('drift-minimap') === 'true');
-      return () => btn.removeEventListener("click", handler);
+      const onToggle = (e) => setShowMinimap(e.detail);
+      editor.addEventListener("_minimap-toggle", onToggle);
+      return () => editor.removeEventListener("_minimap-toggle", onToggle);
     }, []);
 
     const handleUpdate = useCallback((newHtml, plainText) => {

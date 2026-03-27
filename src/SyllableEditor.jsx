@@ -350,22 +350,14 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
   const formDef = POETRY_FORMS[formKey];
   const { lines, rhymeGroups } = analyzeText(value, formDef);
 
-  // Sync header minimap button with local state
+  // Listen for minimap toggle from header button
   useEffect(() => {
-    const btn = document.getElementById('minimapToggleBtn');
-    if (!btn) return;
-    btn.classList.toggle('active', showMinimap);
-    const handler = () => {
-      setShowMinimap((v) => {
-        const next = !v;
-        localStorage.setItem('drift-minimap', next);
-        btn.classList.toggle('active', next);
-        return next;
-      });
-    };
-    btn.addEventListener('click', handler);
-    return () => btn.removeEventListener('click', handler);
-  }, [showMinimap]);
+    const el = document.getElementById('editor');
+    if (!el) return;
+    const onToggle = (e) => setShowMinimap(e.detail);
+    el.addEventListener('_minimap-toggle', onToggle);
+    return () => el.removeEventListener('_minimap-toggle', onToggle);
+  }, []);
 
   // Re-render when CMU data arrives
   useEffect(() => {
@@ -404,13 +396,6 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
           onInfoToggle={() => setShowInfoPanel((v) => !v)}
         />
         <div className="syl-modebar-right">
-          <button
-            className={`syl-toggle-btn ${showMinimap ? 'active' : ''}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setShowMinimap((v) => { const next = !v; localStorage.setItem('drift-minimap', next); return next; })}
-          >
-            minimap
-          </button>
         </div>
       </div>
 
