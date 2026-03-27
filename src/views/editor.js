@@ -167,6 +167,7 @@ export function mountStandaloneEditor() {
   function StandaloneWrapper() {
     const [html, setHtml] = useState(state.currentHtml || contentToHtml(editor.value));
     const [editable, setEditable] = useState(!editor.readOnly);
+    const [showMinimap, setShowMinimap] = useState(localStorage.getItem('drift-minimap') === 'true');
 
     useEffect(() => {
       const sync = () => setHtml(state.currentHtml || contentToHtml(editor.value));
@@ -178,6 +179,23 @@ export function mountStandaloneEditor() {
       const onEditable = (e) => setEditable(e.detail);
       editor.addEventListener("_syl-editable", onEditable);
       return () => editor.removeEventListener("_syl-editable", onEditable);
+    }, []);
+
+    // Listen for minimap toggle from header button
+    useEffect(() => {
+      const btn = document.getElementById("minimapToggleBtn");
+      if (!btn) return;
+      const handler = () => {
+        setShowMinimap((v) => {
+          const next = !v;
+          localStorage.setItem('drift-minimap', next);
+          btn.classList.toggle('active', next);
+          return next;
+        });
+      };
+      btn.addEventListener("click", handler);
+      btn.classList.toggle('active', localStorage.getItem('drift-minimap') === 'true');
+      return () => btn.removeEventListener("click", handler);
     }, []);
 
     const handleUpdate = useCallback((newHtml, plainText) => {
@@ -192,6 +210,7 @@ export function mountStandaloneEditor() {
       placeholder: "begin writing. drift commits when you pause.",
       autoFocus: true,
       editable,
+      showMinimap,
     });
   }
   state.standaloneEditorRoot.render(createElement(StandaloneWrapper));

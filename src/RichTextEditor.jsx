@@ -6,6 +6,7 @@ import Typography from '@tiptap/extension-typography';
 import Underline from '@tiptap/extension-underline';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
+import Minimap from './Minimap.jsx';
 
 // ── Build extensions list ────────────────────────────────────────────────────
 
@@ -177,6 +178,7 @@ export default function RichTextEditor({
   autoFocus = false,
   className = '',
   editable = true,
+  showMinimap = false,
 }) {
   const editor = useEditor({
     extensions: buildExtensions(placeholder),
@@ -210,6 +212,7 @@ export default function RichTextEditor({
     <div className={`rich-editor-wrap ${className}`}>
       <FloatingBubbleMenu editor={editor} />
       <EditorContent editor={editor} />
+      {showMinimap && <Minimap editor={editor} />}
     </div>
   );
 }

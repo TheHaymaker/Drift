@@ -344,10 +344,28 @@ function FormStatus({ lines, rhymeGroups, form }) {
 export default function SyllableEditor({ value, htmlContent, onChange, onHtmlChange, initialFormKey, onFormKeyChange, editable = true }) {
   const [formKey, setFormKey] = useState(initialFormKey || 'haiku');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(() => localStorage.getItem('drift-minimap') === 'true');
   const [, forceUpdate] = useState(0);
 
   const formDef = POETRY_FORMS[formKey];
   const { lines, rhymeGroups } = analyzeText(value, formDef);
+
+  // Sync header minimap button with local state
+  useEffect(() => {
+    const btn = document.getElementById('minimapToggleBtn');
+    if (!btn) return;
+    btn.classList.toggle('active', showMinimap);
+    const handler = () => {
+      setShowMinimap((v) => {
+        const next = !v;
+        localStorage.setItem('drift-minimap', next);
+        btn.classList.toggle('active', next);
+        return next;
+      });
+    };
+    btn.addEventListener('click', handler);
+    return () => btn.removeEventListener('click', handler);
+  }, [showMinimap]);
 
   // Re-render when CMU data arrives
   useEffect(() => {
@@ -386,6 +404,13 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
           onInfoToggle={() => setShowInfoPanel((v) => !v)}
         />
         <div className="syl-modebar-right">
+          <button
+            className={`syl-toggle-btn ${showMinimap ? 'active' : ''}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setShowMinimap((v) => { const next = !v; localStorage.setItem('drift-minimap', next); return next; })}
+          >
+            minimap
+          </button>
         </div>
       </div>
 
@@ -439,6 +464,7 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
             placeholder="begin writing..."
             autoFocus
             editable={editable}
+            showMinimap={showMinimap}
           />
         </div>
 
