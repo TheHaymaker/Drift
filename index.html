@@ -368,6 +368,7 @@
       <span class="editor-title" id="backBtn">drift</span>
       <span class="editor-filename" id="filename">poem.txt</span>
       <button class="syl-mode-btn" id="sylModeBtn" title="Toggle invisible hand / forms">invisible hand / forms</button>
+      <button class="syl-toggle-btn" id="lineNumBtn" title="Toggle line numbers">line #</button>
       <span class="status-pill" id="status">connecting</span>
     </div>
     <div class="editor-subheader">
@@ -414,15 +415,21 @@
 
     <div class="sidebar-mini">
       <span class="sidebar-mini-count" id="miniCommitCount">0</span>
+      <div class="sidebar-mini-actions">
+        <button class="sidebar-mini-btn" id="miniForceCommitBtn" title="commit now">&#9679;</button>
+        <button class="sidebar-mini-btn" id="miniPlaybackBtn" title="play back">&#9654;</button>
+        <button class="sidebar-mini-btn" id="miniExportBtn" title="export">&#8599;</button>
+      </div>
     </div>
 
     <div class="sidebar-inner">
       <div class="sidebar-title">commit history</div>
-      <div class="commit-count">
+      <div class="commit-count" id="commitCountToggle">
         <span id="commitCountNum">0</span>
         snapshots
+        <span class="commits-toggle-icon" id="commitsToggleIcon">&#9654;</span>
       </div>
-      <div class="commits" id="commitList"></div>
+      <div class="commits collapsed" id="commitList"></div>
 
       <div class="selection-action-bar hidden" id="selectionActionBar">
         <span id="selectionCountText">0 selected</span>

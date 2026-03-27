@@ -342,7 +342,6 @@ function FormStatus({ lines, rhymeGroups, form }) {
 // ── Main editor component ────────────────────────────────────────────────────
 
 export default function SyllableEditor({ value, htmlContent, onChange, onHtmlChange, initialFormKey, onFormKeyChange, editable = true }) {
-  const [showLineNums, setShowLineNums] = useState(true);
   const [formKey, setFormKey] = useState(initialFormKey || 'haiku');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [, forceUpdate] = useState(0);
@@ -387,13 +386,6 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
           onInfoToggle={() => setShowInfoPanel((v) => !v)}
         />
         <div className="syl-modebar-right">
-          <button
-            className={`syl-toggle-btn ${showLineNums ? 'active' : ''}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setShowLineNums((v) => !v)}
-          >
-            line #
-          </button>
         </div>
       </div>
 
@@ -433,9 +425,7 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
                       ghost={isGhost && !isActualLine}
                     />
                   )}
-                  {showLineNums && (
-                    <span className="gutter-linenum">{li + 1}</span>
-                  )}
+                  <span className="gutter-linenum">{li + 1}</span>
                 </div>
               );
             })}

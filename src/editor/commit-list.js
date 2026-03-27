@@ -14,6 +14,22 @@ const commitList = document.getElementById("commitList");
 const commitCountNum = document.getElementById("commitCountNum");
 const miniCommitCount = document.getElementById("miniCommitCount");
 
+// ── Commit list collapse toggle ──
+const commitCountToggle = document.getElementById("commitCountToggle");
+const commitsToggleIcon = document.getElementById("commitsToggleIcon");
+
+const commitsExpanded = localStorage.getItem("commitsExpanded") === "true";
+if (commitsExpanded) {
+  commitList.classList.remove("collapsed");
+  commitsToggleIcon?.classList.add("expanded");
+}
+
+commitCountToggle?.addEventListener("click", () => {
+  const isCollapsed = commitList.classList.toggle("collapsed");
+  commitsToggleIcon?.classList.toggle("expanded", !isCollapsed);
+  localStorage.setItem("commitsExpanded", !isCollapsed);
+});
+
 export function createCommitItem(c, isNew, log) {
   const div = document.createElement("div");
   let cls = "commit-item";
@@ -22,10 +38,9 @@ export function createCommitItem(c, isNew, log) {
   div.className = cls;
   div.dataset.hash = c.hash;
   div.dataset.index = c.index;
-  div.draggable = true;
   const logLen = log ? log.length : state.commitLog.length;
   div.innerHTML =
-    '<div class="commit-handle">⠿</div>' +
+    '<span class="drag-handle" draggable="true">⠿</span>' +
     '<div class="commit-content">' +
       '<div class="commit-hash">' + c.hash + '</div>' +
       '<div class="commit-msg">' + escapeHtml(c.message) + '</div>' +
@@ -63,6 +78,9 @@ export function renderCommits(log, newHash) {
 
 // Event delegation — single click listener on commit list
 commitList.addEventListener("click", async (e) => {
+  // Ignore clicks on the drag handle
+  if (e.target.classList.contains("drag-handle")) return;
+
   // Handle inline delete button clicks
   if (e.target.classList.contains("commit-delete-btn")) {
     e.stopPropagation();
@@ -110,8 +128,9 @@ commitList.addEventListener("click", async (e) => {
   if (_showCommitDiff) await _showCommitDiff(state.commitLog[index]);
 });
 
-// Drag-and-drop delegation on commit list
+// Drag-and-drop delegation — only the drag handle initiates drags
 commitList.addEventListener("dragstart", (e) => {
+  if (!e.target.classList.contains("drag-handle")) { e.preventDefault(); return; }
   const item = e.target.closest(".commit-item");
   if (!item) return;
   const index = parseInt(item.dataset.index, 10);
