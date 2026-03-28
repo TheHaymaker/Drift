@@ -438,48 +438,6 @@
         <button class="btn btn-sm" id="clearSelectionBtn">cancel</button>
       </div>
 
-      <!-- Squash confirmation modal -->
-      <div class="commit-modal-overlay hidden" id="squashModal">
-        <div class="commit-modal">
-          <p>Combine <strong><span id="squashModalCount">0</span> snapshots</strong> into one?</p>
-          <p class="commit-modal-message" id="squashModalMessage"></p>
-          <a href="#" id="squashModalHelp" class="commit-modal-help-toggle">what does this do?</a>
-          <p class="commit-modal-help-text hidden" id="squashHelpText">
-            Squashing combines the selected snapshots into a single snapshot,
-            preserving the final content. The intermediate history is removed.
-          </p>
-          <div class="commit-modal-actions">
-            <button class="btn btn-sm" id="squashModalConfirm">squash</button>
-            <button class="btn btn-sm" id="squashModalCancel">cancel</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Delete confirmation modal -->
-      <div class="commit-modal-overlay hidden" id="deleteModal">
-        <div class="commit-modal">
-          <p>Delete <strong><span id="deleteModalCount">0</span> snapshots</strong> from history?</p>
-          <p class="commit-modal-warning">This cannot be undone.</p>
-          <div class="commit-modal-actions">
-            <button class="btn btn-sm btn-danger" id="deleteModalConfirm">delete</button>
-            <button class="btn btn-sm" id="deleteModalCancel">cancel</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Export format picker modal -->
-      <div class="commit-modal-overlay hidden" id="exportModal">
-        <div class="commit-modal">
-          <p>export as&hellip;</p>
-          <div class="commit-modal-actions commit-modal-actions--vertical">
-            <button class="btn btn-sm" id="exportJsonBtn">history (json)</button>
-            <button class="btn btn-sm" id="exportPdfBtn">poem (pdf)</button>
-            <button class="btn btn-sm" id="exportDocxBtn">poem (docx)</button>
-            <button class="btn btn-sm" id="exportCancelBtn">cancel</button>
-          </div>
-        </div>
-      </div>
-
       <div class="settings">
         <div class="setting-row">
           <span class="setting-label">pause threshold</span>
@@ -490,6 +448,50 @@
         <button class="btn" id="playbackBtn" style="margin-top: 4px;">&#9654; play back</button>
         <button class="btn" id="exportBtn" style="margin-top: 4px;">export</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modals (outside sidebar to avoid stacking-context / display:none issues) ─── -->
+
+<!-- Squash confirmation modal -->
+<div class="commit-modal-overlay hidden" id="squashModal">
+  <div class="commit-modal">
+    <p>Combine <strong><span id="squashModalCount">0</span> snapshots</strong> into one?</p>
+    <p class="commit-modal-message" id="squashModalMessage"></p>
+    <a href="#" id="squashModalHelp" class="commit-modal-help-toggle">what does this do?</a>
+    <p class="commit-modal-help-text hidden" id="squashHelpText">
+      Squashing combines the selected snapshots into a single snapshot,
+      preserving the final content. The intermediate history is removed.
+    </p>
+    <div class="commit-modal-actions">
+      <button class="btn btn-sm" id="squashModalConfirm">squash</button>
+      <button class="btn btn-sm" id="squashModalCancel">cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="commit-modal-overlay hidden" id="deleteModal">
+  <div class="commit-modal">
+    <p>Delete <strong><span id="deleteModalCount">0</span> snapshots</strong> from history?</p>
+    <p class="commit-modal-warning">This cannot be undone.</p>
+    <div class="commit-modal-actions">
+      <button class="btn btn-sm btn-danger" id="deleteModalConfirm">delete</button>
+      <button class="btn btn-sm" id="deleteModalCancel">cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export format picker modal -->
+<div class="commit-modal-overlay hidden" id="exportModal">
+  <div class="commit-modal">
+    <p>export as&hellip;</p>
+    <div class="commit-modal-actions commit-modal-actions--vertical">
+      <button class="btn btn-sm" id="exportJsonBtn">history (json)</button>
+      <button class="btn btn-sm" id="exportPdfBtn">poem (pdf)</button>
+      <button class="btn btn-sm" id="exportDocxBtn">poem (docx)</button>
+      <button class="btn btn-sm" id="exportCancelBtn">cancel</button>
     </div>
   </div>
 </div>
