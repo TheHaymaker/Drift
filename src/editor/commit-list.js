@@ -14,21 +14,6 @@ const commitList = document.getElementById("commitList");
 const commitCountNum = document.getElementById("commitCountNum");
 const miniCommitCount = document.getElementById("miniCommitCount");
 
-// ── Commit list collapse toggle ──
-const commitCountToggle = document.getElementById("commitCountToggle");
-const commitsToggleIcon = document.getElementById("commitsToggleIcon");
-
-const commitsExpanded = localStorage.getItem("commitsExpanded") === "true";
-if (commitsExpanded) {
-  commitList.classList.remove("collapsed");
-  commitsToggleIcon?.classList.add("expanded");
-}
-
-commitCountToggle?.addEventListener("click", () => {
-  const isCollapsed = commitList.classList.toggle("collapsed");
-  commitsToggleIcon?.classList.toggle("expanded", !isCollapsed);
-  localStorage.setItem("commitsExpanded", !isCollapsed);
-});
 
 export function createCommitItem(c, isNew, log) {
   const div = document.createElement("div");
