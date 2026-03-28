@@ -2638,6 +2638,7 @@ input[type="range"]::-webkit-slider-thumb {
   flex: 1;
   overflow: auto;
   min-height: 0;
+  align-items: flex-start;
 }
 
 /* ── Left gutter ── */
