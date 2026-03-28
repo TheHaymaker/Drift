@@ -179,6 +179,7 @@ export default function RichTextEditor({
   className = '',
   editable = true,
   showMinimap = false,
+  onEditorReady,
 }) {
   const editor = useEditor({
     extensions: buildExtensions(placeholder),
@@ -189,6 +190,11 @@ export default function RichTextEditor({
       onUpdate?.(ed.getHTML(), ed.getText('\n'));
     },
   });
+
+  // Expose editor instance to parent
+  useEffect(() => {
+    if (editor) onEditorReady?.(editor);
+  }, [editor, onEditorReady]);
 
   // Sync external content changes (e.g. loading a snapshot)
   useEffect(() => {
@@ -209,9 +215,11 @@ export default function RichTextEditor({
   if (!editor) return null;
 
   return (
-    <div className={`rich-editor-wrap ${className}`}>
+    <div className={`rich-editor-wrap ${className}${showMinimap ? ' has-minimap' : ''}`}>
       <FloatingBubbleMenu editor={editor} />
-      <EditorContent editor={editor} />
+      <div className="editor-scroll-container">
+        <EditorContent editor={editor} />
+      </div>
       {showMinimap && <Minimap editor={editor} />}
     </div>
   );

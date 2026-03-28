@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { analyzeText, POETRY_FORMS, FORM_CATEGORIES } from './syllabify.js';
 import { setCmuUpdateCallback } from './rhyme-client.js';
 import RichTextEditor from './RichTextEditor.jsx';
+import Minimap from './Minimap.jsx';
 
 // ── Rhyme group colour palette ───────────────────────────────────────────────
 
@@ -345,6 +346,7 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
   const [formKey, setFormKey] = useState(initialFormKey || 'haiku');
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [showMinimap, setShowMinimap] = useState(() => localStorage.getItem('drift-minimap') === 'true');
+  const [editorInstance, setEditorInstance] = useState(null);
   const [, forceUpdate] = useState(0);
 
   const formDef = POETRY_FORMS[formKey];
@@ -449,9 +451,12 @@ export default function SyllableEditor({ value, htmlContent, onChange, onHtmlCha
             placeholder="begin writing..."
             autoFocus
             editable={editable}
-            showMinimap={showMinimap}
+            onEditorReady={setEditorInstance}
           />
         </div>
+
+        {/* ── Minimap (outside syl-body so it stays sticky) ── */}
+        {showMinimap && editorInstance && <Minimap editor={editorInstance} />}
 
         {/* ── Info panel ── */}
         {showInfoPanel && <FormInfoPanel formKey={formKey} />}
