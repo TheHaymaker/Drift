@@ -1,8 +1,27 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Component } from "react";
 import { ShikiMagicMovePrecompiled } from "shiki-magic-move/react";
 import "shiki-magic-move/style.css";
 import { generateDisintegrationMask } from "./disintegration-mask.js";
 import { htmlToKeyedTokens } from "./htmlTokenizer.js";
+
+// ─── Error Boundary ───
+class PlaybackErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="playback-error">
+          <div className="playback-error-message">playback rendering failed</div>
+          <button onClick={this.props.onBack} className="playback-error-back">
+            &larr; back
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── Timing defaults (ms) ───
 const BASE_INTERVAL = 3500;
@@ -267,37 +286,39 @@ export default function Playback({ docId, onBack, initialData }) {
   }
 
   return (
-    <div className="playback-container">
-      <div className="playback-glow" />
+    <PlaybackErrorBoundary onBack={onBack}>
+      <div className="playback-container">
+        <div className="playback-glow" />
 
-      <div className="playback-header">
-        <button onClick={onBack} className="playback-brand">
-          drift
-        </button>
-        <span className="playback-label">
-          git log
-        </span>
-        <a href="#/settings" className="settings-gear playback-settings-gear" title="settings">&#9881; settings</a>
+        <div className="playback-header">
+          <button onClick={onBack} className="playback-brand">
+            drift
+          </button>
+          <span className="playback-label">
+            git log
+          </span>
+          <a href="#/settings" className="settings-gear playback-settings-gear" title="settings">&#9881; settings</a>
+        </div>
+
+        <MagicMoveRenderer
+          commits={data.commits}
+          currentIndex={ci}
+          animDuration={smmDuration}
+        />
+
+        <CommitNav
+          commits={data.commits}
+          currentIndex={ci}
+          onNavigate={handleNavigate}
+          playing={playing}
+          onTogglePlay={() => {
+            if (ci >= data.commits.length - 1) handleNavigate(0);
+            setPlaying(p => !p);
+          }}
+          speed={speed}
+          onSpeedChange={handleSpeedChange}
+        />
       </div>
-
-      <MagicMoveRenderer
-        commits={data.commits}
-        currentIndex={ci}
-        animDuration={smmDuration}
-      />
-
-      <CommitNav
-        commits={data.commits}
-        currentIndex={ci}
-        onNavigate={handleNavigate}
-        playing={playing}
-        onTogglePlay={() => {
-          if (ci >= data.commits.length - 1) handleNavigate(0);
-          setPlaying(p => !p);
-        }}
-        speed={speed}
-        onSpeedChange={handleSpeedChange}
-      />
-    </div>
+    </PlaybackErrorBoundary>
   );
 }

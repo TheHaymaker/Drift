@@ -103,7 +103,7 @@ export function htmlToTokenLines(html) {
 
     // If the paragraph was empty, add an empty token
     if (tokens.length === 0) {
-      tokens.push({ content: '', offset: offsetRef.value, color: DEFAULT_COLOR });
+      tokens.push({ content: '', offset: offsetRef.value, color: getDefaultColor() });
     }
 
     result.push(tokens);
