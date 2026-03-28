@@ -681,28 +681,6 @@ textarea::selection {
   margin-bottom: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  user-select: none;
-}
-
-.commit-count:hover {
-  color: var(--text);
-}
-
-.commits-toggle-icon {
-  font-size: 0.5rem;
-  display: inline-block;
-  transition: transform 0.2s ease;
-  margin-left: 4px;
-  vertical-align: middle;
-}
-
-.commits-toggle-icon.expanded {
-  transform: rotate(90deg);
-}
-
-.commits.collapsed {
-  display: none;
 }
 
 .commit-count span {
