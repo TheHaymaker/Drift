@@ -2654,8 +2654,17 @@ input[type="range"]::-webkit-slider-thumb {
   display: flex;
   align-items: center;
   gap: 6px;
-  /* Height matches the editor line-height (2 × font-size) */
-  height: calc(var(--font-editor-size) * 2);
+}
+
+/* Invisible anchor that mirrors the editor's font metrics exactly,
+   so every gutter row is the same height as a ProseMirror <p>. */
+.syl-gutter-row::before {
+  content: '\200B'; /* zero-width space */
+  font-family: var(--font-body);
+  font-size: var(--font-editor-size);
+  line-height: 2;
+  width: 0;
+  overflow: hidden;
 }
 
 .gutter-sylcount {
