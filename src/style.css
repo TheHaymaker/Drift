@@ -2638,7 +2638,6 @@ input[type="range"]::-webkit-slider-thumb {
   flex: 1;
   overflow: auto;
   min-height: 0;
-  align-items: flex-start;
 }
 
 /* ── Left gutter ── */
@@ -3181,6 +3180,16 @@ input[type="range"]::-webkit-slider-thumb {
   flex-direction: column;
   min-height: 0;
   position: relative;
+}
+
+/* Tiptap's EditorContent renders a plain wrapper <div> (no class).
+   Make it fill the flex column so ProseMirror's flex:1 takes effect,
+   matching standalone mode where ProseMirror fills via min-height:100%. */
+.rich-editor-wrap > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .editor-scroll-container {
