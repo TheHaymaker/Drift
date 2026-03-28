@@ -2654,8 +2654,8 @@ input[type="range"]::-webkit-slider-thumb {
   display: flex;
   align-items: center;
   gap: 6px;
-  /* Height matches the textarea line-height (2 * font-size) */
-  height: 2.5rem;
+  /* Height matches the editor line-height (2 × font-size) */
+  height: calc(var(--font-editor-size) * 2);
 }
 
 .gutter-sylcount {
@@ -3699,7 +3699,8 @@ input[type="range"]::-webkit-slider-thumb {
   font-size: 0.6rem;
   color: var(--text-faint);
   opacity: 0.45;
-  top: 0.85em;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 /* Syllable gutter — hide line nums when toggle is off */
