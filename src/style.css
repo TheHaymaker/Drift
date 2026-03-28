@@ -3167,7 +3167,6 @@ input[type="range"]::-webkit-slider-thumb {
   flex: 1;
   min-height: 0;
   flex-direction: column;
-  overflow-y: auto;
 }
 
 #standaloneEditorMount.visible {
@@ -3182,6 +3181,16 @@ input[type="range"]::-webkit-slider-thumb {
   flex-direction: column;
   min-height: 0;
   position: relative;
+}
+
+.editor-scroll-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.has-minimap .editor-scroll-container .ProseMirror {
+  padding-right: 90px;
 }
 
 /* Standalone (non-syllable) mode — match the old textarea styling */
@@ -3299,6 +3308,16 @@ input[type="range"]::-webkit-slider-thumb {
   opacity: 0.85;
   user-select: none;
   cursor: pointer;
+}
+
+.minimap-scroll {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .minimap-content {

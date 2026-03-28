@@ -8,6 +8,7 @@ export default function Minimap({ editor }) {
   const viewportRef = useRef(null);
   const [html, setHtml] = useState('');
   const [viewport, setViewport] = useState({ top: 0, height: 20 });
+  const [contentOffset, setContentOffset] = useState(0);
   const dragging = useRef(false);
   const dragStartY = useRef(0);
   const dragStartScroll = useRef(0);
@@ -31,11 +32,14 @@ export default function Minimap({ editor }) {
     };
   }, [editor]);
 
-  // Find the scroll container (the ProseMirror DOM's scrollable ancestor)
+  // Find the scroll container (explicit class-based lookup with fallback)
   const getScrollEl = useCallback(() => {
     if (!editor || editor.isDestroyed) return null;
     const pm = editor.view.dom;
-    // Walk up to find the scrollable container
+    // Look for our explicit scroll containers first
+    const explicit = pm.closest('.editor-scroll-container') || pm.closest('.syl-body');
+    if (explicit) return explicit;
+    // Fallback: walk up to find any scrollable ancestor
     let el = pm;
     while (el) {
       if (el.scrollHeight > el.clientHeight + 1 && el.clientHeight > 0) return el;
@@ -65,6 +69,14 @@ export default function Minimap({ editor }) {
     const vpTop = scrollRatio * maxTop;
 
     setViewport({ top: Math.max(0, vpTop), height: vpHeight });
+
+    // Scroll minimap content when it's taller than the container
+    if (contentScaledH > minimapH) {
+      const maxOffset = contentScaledH - minimapH;
+      setContentOffset(-scrollRatio * maxOffset);
+    } else {
+      setContentOffset(0);
+    }
   }, [getScrollEl]);
 
   // Listen to scroll events on the editor
@@ -80,6 +92,15 @@ export default function Minimap({ editor }) {
     };
   }, [getScrollEl, updateViewport, html]);
 
+  // ResizeObserver for container size changes (e.g. info panel toggle)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => updateViewport());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [updateViewport]);
+
   // Click on minimap background → scroll editor to that position
   const handleMinimapClick = useCallback((e) => {
     if (dragging.current) return;
@@ -93,10 +114,12 @@ export default function Minimap({ editor }) {
       ? contentRef.current.scrollHeight * SCALE
       : container.clientHeight;
     const mapH = Math.min(container.clientHeight, contentScaledH);
-    const ratio = mapH > 0 ? clickY / mapH : 0;
+    // Adjust clickY for content offset (when minimap content is scrolled)
+    const adjustedClickY = clickY - contentOffset;
+    const ratio = mapH > 0 ? adjustedClickY / mapH : 0;
     const target = ratio * scrollEl.scrollHeight - scrollEl.clientHeight / 2;
     scrollEl.scrollTop = Math.max(0, Math.min(target, scrollEl.scrollHeight - scrollEl.clientHeight));
-  }, [getScrollEl]);
+  }, [getScrollEl, contentOffset]);
 
   // Drag viewport indicator
   const handleViewportDown = useCallback((e) => {
@@ -146,11 +169,16 @@ export default function Minimap({ editor }) {
       onMouseDown={handleMinimapClick}
     >
       <div
-        ref={contentRef}
-        className="minimap-content"
-        style={{ transform: `scale(${SCALE})` }}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+        className="minimap-scroll"
+        style={{ transform: `translateY(${contentOffset}px)` }}
+      >
+        <div
+          ref={contentRef}
+          className="minimap-content"
+          style={{ transform: `scale(${SCALE})` }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
       <div
         ref={viewportRef}
         className="minimap-viewport"
