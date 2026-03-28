@@ -3232,7 +3232,6 @@ input[type="range"]::-webkit-slider-thumb {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow-y: auto;
 }
 
 /* Common ProseMirror resets */
